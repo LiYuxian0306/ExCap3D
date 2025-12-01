@@ -11,7 +11,7 @@
 #SBATCH --partition=submit  
 
 eval "$(conda shell.bash hook)"
-conda activate mask3d_2
+conda activate mask3d_cuda113
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
 
