@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ~/.bashrc
+
 #SBATCH --job-name=m3d_sample_pth 
 #SBATCH --mail-type=END,FAIL          
 #SBATCH --mail-user=chandan.yeshwanth@tum.de 
