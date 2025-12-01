@@ -57,6 +57,9 @@ dependencies:
   - zlib=1.2.13=h5eee18b_0
   - zstandard=0.19.0=py310h5eee18b_0
   - pip<24.1
+  - cython      # <-- 新增
+  - setuptools  # <-- 新增
+  - wheel       # <-- 新增
   - pip:
       - absl-py==1.4.0
       - addict==2.4.0
