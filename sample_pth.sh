@@ -38,6 +38,6 @@ python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
     --n_jobs=8 \
     --data_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     --save_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final/ \
-    --train_list=/menegroth/scannetpp-train-data/meta-release-v2/split_public/nvs_sem_train.txt \
-    --val_list=/menegroth/scannetpp-train-data/meta-release-v2/split_public/nvs_sem_val.txt \
+    --train_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt \
+    --val_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt \
 
