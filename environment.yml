@@ -1,4 +1,4 @@
-name: mask3d_cuda113
+
 channels:
   - anaconda
   - defaults
