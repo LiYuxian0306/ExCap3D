@@ -1,6 +1,5 @@
 #!/bin/bash
 
-source ~/.bashrc
 
 #SBATCH --job-name=m3d_sample_pth 
 #SBATCH --mail-type=END,FAIL          
@@ -12,7 +11,7 @@ source ~/.bashrc
 #SBATCH --output=/rhome/cyeshwanth/output/m3d_sample_pth_%j.log
 #SBATCH --partition=submit  
 
-eval "$(conda shell.bash hook)"
+eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
 conda activate mask3d_cuda113
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
