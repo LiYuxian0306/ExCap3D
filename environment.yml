@@ -1,10 +1,11 @@
 
 channels:
+  - conda-forge  # <-- 新增
   - anaconda
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
-  - pycocotools
+  - pycocotools=2.0.4
   - _openmp_mutex=5.1=1_gnu
   - blas=1.0=openblas
   - boltons=23.0.0=py310h06a4308_0
