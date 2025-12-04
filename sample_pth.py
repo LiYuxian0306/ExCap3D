@@ -46,7 +46,8 @@ def process_file(scene_id, cfg):
     # read each pth file
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
-    if cfg.segments_dir is not None:
+    # Check if segments_dir is None or "null" (string), then read from scannetpp scene directory
+    if cfg.segments_dir is not None and str(cfg.segments_dir).lower() != 'null':
         # .segs.json / .json / something else
         seg_file = Path(cfg.segments_dir) / f'{scene_id}{cfg.segfile_ext}'
 
@@ -55,6 +56,14 @@ def process_file(scene_id, cfg):
 
         # just load the segment IDs, assign to sampled points later
         # use a separate kdtree if using small mesh, otherwise 
+        orig_vtx_seg_ids = np.array(seg_data['segIndices'], dtype=np.int32)
+    else:
+        # If segments_dir is None or "null", read segments.json directly from scannetpp scene directory
+        seg_file = scene.scan_mesh_segs_path
+        
+        with open(seg_file, 'r') as f:
+            seg_data = json.load(f)
+        
         orig_vtx_seg_ids = np.array(seg_data['segIndices'], dtype=np.int32)
 
     # read mesh
