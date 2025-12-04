@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import numpy as np
+
 try:
     # 尝试导入 numpy._core，如果失败（说明是旧版 numpy），则进行映射
     import numpy._core
@@ -10,7 +12,7 @@ except ImportError:
     if hasattr(numpy, 'core'):
         sys.modules['numpy._core'] = numpy.core
 
-import numpy as np
+
 
 from joblib import Parallel, delayed
 from loguru import logger
