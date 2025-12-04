@@ -286,7 +286,9 @@ class InstanceSegmentation(pl.LightningModule):
         data, target, file_names, cap_gt = batch
 
         if data.features.shape[0] > self.config.general.max_batch_size:
-            print("data exceeds threshold")
+            print(f"data exceeds threshold: {data.features.shape[0]} points > {self.config.general.max_batch_size} max_batch_size")
+            print(f"Batch size (samples): {len(target)}")
+            print(f"Files in batch: {file_names}")
             raise RuntimeError("BATCH TOO BIG")
 
         if len(target) == 0:
