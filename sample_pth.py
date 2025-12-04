@@ -4,14 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-# --- 全局补丁 (针对主进程) ---
-# 必须使用 'numpy._core' 字符串，不能用 'np._core'
-try:
-    import numpy._core
-except ImportError:
-    if hasattr(np, 'core'):
-        sys.modules['numpy._core'] = np.core
-# ---------------------------
+# --- 注意：不要在这里打全局补丁，否则会由 scipy 导入导致 SystemError ---
 
 from joblib import Parallel, delayed
 from loguru import logger
@@ -48,18 +41,18 @@ def main(cfg: DictConfig):
 
 # process one scene id
 def process_file(scene_id, cfg):
-    # --- 局部补丁 (针对 Joblib 子进程) ---
-    # 确保在子进程中，torch.load 之前，numpy._core 已经被正确映射
-    # 这是为了防止多进程环境下全局补丁未生效
+    # --- 关键修改：将补丁移至此处 ---
+    # 只有在所有库(scipy等)导入完成后，且在 torch.load 之前，才进行映射
+    # 这样可以避免 scipy 初始化时的 ImportError/SystemError
     if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
         sys.modules['numpy._core'] = np.core
-    # ----------------------------------
+    # -------------------------------
 
     fname = f'{scene_id}.pth'
     scene = ScannetppScene_Release(scene_id, data_root=cfg.data_dir)
 
     # read each pth file
-    # 这里会触发 pickle 加载，需要 numpy._core 存在
+    # 这里会触发 pickle 加载，此时 numpy._core 已被临时映射，可以成功加载 NumPy 2.x 的数据
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
     # Check if segments_dir is None or "null" (string), then read from scannetpp scene directory
