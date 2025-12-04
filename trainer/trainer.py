@@ -8,7 +8,8 @@ from pathlib import Path
 import statistics
 import os
 import math
-from benchmark.evaluate_caption import eval_assigned_captions, plot_cap_eval
+# Import caption evaluation functions only when needed (lazy import)
+# from benchmark.evaluate_caption import eval_assigned_captions, plot_cap_eval
 import pyviz3d.visualizer as vis
 from torch_scatter import scatter_mean
 from benchmark.evaluate_semantic_instance import evaluate
@@ -2486,6 +2487,9 @@ class InstanceSegmentation(pl.LightningModule):
 
         prefix: empty -> object, otherwise part_
         '''
+        # Import caption evaluation functions only when needed (lazy import)
+        from benchmark.evaluate_caption import eval_assigned_captions, plot_cap_eval
+        
         print(f'Eval caption on {log_prefix} set, {len(cap_eval_scene_ids)} scenes')
 
         # all preds and gt

@@ -108,7 +108,7 @@ general:
   # how many predicted masks to keep per scene (why is it called image?)
   topk_per_image: 100
   ignore_mask_idx: []
-  max_batch_size: 99999999
+  max_batch_size: 2
 
   show_sample_stats: true
 

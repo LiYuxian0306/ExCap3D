@@ -34,7 +34,7 @@ caption_data_dir: null
 # data loader
 pin_memory: false
 num_workers: 4
-batch_size: 6
+batch_size: 2
 test_batch_size: 1
 cache_data: false
 

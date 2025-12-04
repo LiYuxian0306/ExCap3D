@@ -21,6 +21,14 @@
 - **原因**: detectron2 需要 omegaconf>=2.1.0（需要 SCMode），但项目要求 omegaconf==2.0.6
 - **解决**: 创建了 `models/detectron2_compat.py` 兼容层，替代 detectron2 的依赖
 
+### 错误5: `AttributeError: module 'torch.utils._pytree' has no attribute 'register_pytree_node'`
+**状态**: ✅ 已解决（通过延迟导入）
+- **原因**: `trainer/trainer.py` 在文件顶部无条件导入 `benchmark.evaluate_caption`，触发导入链：
+  - `torchmetrics.text` → `torchvision` → `torch.onnx` → `transformers`
+  - transformers 版本与 PyTorch 版本不兼容（API 变更）
+- **解决**: 将导入改为延迟导入（在 `eval_caps` 方法内部导入）
+- **影响**: 现在只有在需要 caption 评估时才会导入相关依赖
+
 ## 根本原因
 
 **版本要求**（来自 `environment.yml`）:
@@ -47,6 +55,7 @@
 **已更新的文件**：
 - `models/criterion.py` - 使用兼容层替代 detectron2
 - `models/matcher.py` - 使用兼容层替代 detectron2
+- `trainer/trainer.py` - 延迟导入 caption 评估函数（避免 transformers 导入）
 
 **验证**：
 ```bash
@@ -155,4 +164,22 @@ print(f'✓ detectron2: {detectron2.__version__}')
 3. **如果仍有问题**:
    - 检查是否有其他包也要求升级 hydra-core 或 omegaconf
    - 考虑使用虚拟环境隔离依赖
+
+## 延迟导入策略
+
+为了避免不必要的依赖导入，以下模块使用了延迟导入（lazy import）：
+
+1. **`trainer/trainer.py`**:
+   - `benchmark.evaluate_caption` 的导入已移至 `eval_caps` 方法内部
+   - 只有在需要 caption 评估时才会导入（避免 transformers 版本冲突）
+
+2. **`datasets/semseg.py`**:
+   - `transformers` 的导入已移至条件块内
+   - 只有在 `gen_captions=True` 或 `gen_part_captions=True` 时才会导入
+
+**优势**:
+- ✅ 避免不必要的依赖导入
+- ✅ 减少启动时间
+- ✅ 避免版本冲突（如 transformers 与 PyTorch 不兼容）
+- ✅ 功能完全保留（需要时会正常导入）
 
