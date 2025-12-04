@@ -20,12 +20,12 @@ class ScannetppPreprocessing(BasePreprocessing):
     '''
     def __init__(
             self,
-            data_dir: str,
-            save_dir: str,
-            train_list: str,
-            val_list: str,
-            labels_path: str = '/cluster/eriador/cyeshwanth/caption3d/spp_meta/top100.txt',
-            instance_labels_path: str = "/cluster/eriador/cyeshwanth/caption3d/spp_meta/top17_instance_from_100_v2.txt",
+            data_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled',
+            save_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final',
+            train_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt',
+            val_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt',
+            labels_path: str = '/home/kylin/datasets/scannetpp/scannetpp/metadata/semantic_benchmark/top100.txt',
+            instance_labels_path: str = "/home/kylin/datasets/scannetpp/scannetpp/metadata/semantic_benchmark/top100_instance.txt",
             modes: tuple = ("train", "validation"),
             n_jobs: int = -1,
     ):
