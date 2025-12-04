@@ -1,20 +1,32 @@
+import os
+# --- CRITICAL FIX: Set environment variables BEFORE other imports ---
+# This prevents Open3D/NumPy/PyTorch from creating conflicting thread pools
+# in the worker processes, which causes the Segmentation Fault.
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import sys
 import json
 from pathlib import Path
 
 import numpy as np
-
-# --- 注意：不要在这里打全局补丁，否则会由 scipy 导入导致 SystemError ---
-
 from joblib import Parallel, delayed
 from loguru import logger
 import hydra
 from omegaconf import DictConfig
 
 import torch
-from scipy.spatial import KDTree
+# Note: We keep ScannetppScene_Release here, but if it imports Open3D globally, 
+# the env vars above are the main protection.
 from scannetpp.common.scene_release import ScannetppScene_Release
-import open3d as o3d
+
+# --- MOVED IMPORTS ---
+# Removed global imports of open3d and scipy to prevent SegFaults during forking.
+# import open3d as o3d
+# from scipy.spatial import KDTree
 
 
 def read_txt_list(path):
@@ -34,6 +46,7 @@ def main(cfg: DictConfig):
             print(f'Processing ({ndx}/{len(cfg.scene_ids)}) {scene_id}')
             process_file(scene_id, cfg)
     else:
+        # Using joblib parallel processing
         _ = Parallel(n_jobs=cfg.n_jobs, verbose=10)(
             delayed(process_file)(scene_id, cfg)
             for scene_id in cfg.scene_ids
@@ -41,18 +54,22 @@ def main(cfg: DictConfig):
 
 # process one scene id
 def process_file(scene_id, cfg):
-    # --- 关键修改：将补丁移至此处 ---
-    # 只有在所有库(scipy等)导入完成后，且在 torch.load 之前，才进行映射
-    # 这样可以避免 scipy 初始化时的 ImportError/SystemError
+    # --- LOCAL IMPORTS (Fix for SegFault) ---
+    # Importing these inside the worker process ensures a clean initialization
+    import open3d as o3d
+    from scipy.spatial import KDTree
+
+    # --- NUMPY PATCH (Fix for SystemError/ImportError) ---
+    # Ensure numpy._core is mapped for torch.load inside the worker
     if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
         sys.modules['numpy._core'] = np.core
-    # -------------------------------
+    # -----------------------------------------------------
 
     fname = f'{scene_id}.pth'
     scene = ScannetppScene_Release(scene_id, data_root=cfg.data_dir)
 
     # read each pth file
-    # 这里会触发 pickle 加载，此时 numpy._core 已被临时映射，可以成功加载 NumPy 2.x 的数据
+    # This triggers pickle load, requiring the numpy patch above
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
     # Check if segments_dir is None or "null" (string), then read from scannetpp scene directory
@@ -64,7 +81,6 @@ def process_file(scene_id, cfg):
             seg_data = json.load(f)
 
         # just load the segment IDs, assign to sampled points later
-        # use a separate kdtree if using small mesh, otherwise 
         orig_vtx_seg_ids = np.array(seg_data['segIndices'], dtype=np.int32)
     else:
         # If segments_dir is None or "null", read segments.json directly from scannetpp scene directory
