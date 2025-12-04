@@ -1,0 +1,12 @@
+# @package _group_
+# 简化的余弦退火调度器 - 比OneCycleLR更稳定
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: null # gets set in the code to epochs x steps per epoch
+  eta_min: 1e-6 # 最小学习率
+  last_epoch: -1
+
+pytorch_lightning_params:
+  interval: step
+

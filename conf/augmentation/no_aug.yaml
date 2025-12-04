@@ -1,0 +1,12 @@
+# @package _group_
+# 禁用所有数据增强的配置
+# 用于简化训练，减少不稳定性
+
+__version__: 0.1.6
+transform:
+  __class_fullname__: volumentations.core.composition.Compose
+  additional_targets: {}
+  p: 1.0
+  transforms: []
+  # 空列表表示不进行任何增强
+

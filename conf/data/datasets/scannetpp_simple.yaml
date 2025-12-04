@@ -1,0 +1,104 @@
+# @package data
+# 简化的scannetpp数据集配置 - 禁用或减少数据增强
+train_dataset:
+  _target_: datasets.semseg.SemanticSegmentationDataset
+  dataset_name: "scannetpp"
+  data_dir: ${data.data_dir}
+  # 使用简化的数据增强配置（或禁用）
+  image_augmentations_path: conf/augmentation/no_image_aug.yaml  # 禁用颜色增强
+  volume_augmentations_path: conf/augmentation/no_aug.yaml  # 禁用3D增强
+  data_percent: 1.0
+  mode: ${data.train_mode}
+  ignore_label: ${data.ignore_label}
+  num_labels: ${data.num_labels}
+  add_raw_coordinates: ${data.add_raw_coordinates}
+  add_colors: ${data.add_colors}
+  add_normals: ${data.add_normals}
+  add_instance: ${data.add_instance}
+  # 禁用其他增强
+  instance_oversampling: 0.0
+  place_around_existing: false
+  point_per_cut: 0
+  max_cut_region: 0
+  flip_in_center: false
+  noise_rate: 0
+  resample_points: 0
+  add_unlabeled_pc: false
+  cropping: false  # 禁用cropping
+  cropping_args: ${data.cropping_args}
+  is_tta: false
+  crop_min_size: ${data.crop_min_size}
+  crop_length: ${data.crop_length}
+  filter_out_classes: []  # scannetpp不需要filter
+  label_offset: 0
+  overfit: ${data.overfit}
+  overfit_n_instances: ${data.overfit_n_instances}
+  overfit_instance_ids: ${data.overfit_instance_ids}
+  clip_points: ${data.train_dataset.clip_points}
+  subset: ${data.subset}
+  keep_instance_classes_file: ${data.instance_classes_file}
+  # 禁用所有增强，使训练更稳定
+  no_aug: false  # 设置为true可以完全禁用增强，但这里通过配置文件禁用
+  list_file: ${data.train_list_file}
+  repeat: null
+  #### CAPTIONING ####
+  gen_captions: ${general.gen_captions}
+  gen_part_captions: ${general.gen_part_captions}
+  caption_data_dir: ${data.caption_data_dir}
+  max_caption_length: ${general.max_caption_length}
+  semlabel_caption: ${general.semlabel_caption}
+  exclude_scenes_without_caption: ${general.exclude_scenes_without_caption}
+  tokenizer_model_name: ${caption_model.tokenizer_model_name}
+  obj_caption_key: ${general.obj_caption_key}
+  part_caption_key: ${general.part_caption_key}
+  caption_no_aug: false
+  max_caption_aug: null
+  extra_feats_dir: ${data.extra_feats_dir}
+  extra_feats_dim: ${data.extra_feats_dim}
+  scannet_use_others_class: ${data.scannet_use_others_class}
+
+validation_dataset:
+  _target_: datasets.semseg.SemanticSegmentationDataset
+  dataset_name: "scannetpp"
+  data_dir: ${data.data_dir}
+  image_augmentations_path: null  # 验证集不使用增强
+  volume_augmentations_path: null
+  data_percent: 1.0
+  mode: ${data.validation_mode}
+  ignore_label: ${data.ignore_label}
+  num_labels: ${data.num_labels}
+  add_raw_coordinates: ${data.add_raw_coordinates}
+  add_colors: ${data.add_colors}
+  add_normals: ${data.add_normals}
+  add_instance: ${data.add_instance}
+  cropping: false
+  is_tta: false
+  crop_min_size: ${data.crop_min_size}
+  crop_length: ${data.crop_length}
+  filter_out_classes: []
+  label_offset: 0
+  overfit: ${data.overfit}
+  overfit_n_instances: ${data.overfit_n_instances}
+  overfit_instance_ids: ${data.overfit_instance_ids}
+  clip_points: 0
+  subset: ${data.subset}
+  keep_instance_classes_file: ${data.instance_classes_file}
+  no_aug: true  # 验证集完全禁用增强
+  list_file: ${data.val_list_file}
+  repeat: null
+  #### CAPTIONING ####
+  gen_captions: ${general.gen_captions}
+  gen_part_captions: ${general.gen_part_captions}
+  caption_data_dir: ${data.caption_data_dir}
+  max_caption_length: ${general.max_caption_length}
+  semlabel_caption: ${general.semlabel_caption}
+  exclude_scenes_without_caption: ${general.exclude_scenes_without_caption}
+  tokenizer_model_name: ${caption_model.tokenizer_model_name}
+  obj_caption_key: ${general.obj_caption_key}
+  part_caption_key: ${general.part_caption_key}
+  caption_no_aug: true
+  max_caption_aug: 1
+  extra_feats_dir: ${data.extra_feats_dir}
+  extra_feats_dim: ${data.extra_feats_dim}
+  scannet_use_others_class: ${data.scannet_use_others_class}
+

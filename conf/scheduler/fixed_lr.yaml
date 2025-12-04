@@ -1,0 +1,12 @@
+# @package _group_
+# 固定学习率调度器 - 最简单，最稳定
+# 使用StepLR但设置很大的step_size，实际上不改变学习率
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 1000000  # 非常大的步数，实际上不会触发学习率衰减
+  gamma: 1.0  # 学习率乘数，1.0表示不改变
+
+pytorch_lightning_params:
+  interval: step
+

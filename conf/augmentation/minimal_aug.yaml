@@ -1,0 +1,22 @@
+# @package _group_
+# 最小化数据增强配置
+# 只保留轻微的增强，用于简化训练
+
+__version__: 0.1.6
+transform:
+  __class_fullname__: volumentations.core.composition.Compose
+  additional_targets: {}
+  p: 1.0
+  transforms:
+    # 轻微的旋转（只绕Z轴，小角度）
+    - __class_fullname__: volumentations.augmentations.transforms.RotateAroundAxis3d
+      always_apply: false
+      axis:
+        - 0
+        - 0
+        - 1
+      p: 0.3  # 降低概率
+      rotation_limit:
+        - -0.52359877559829  # -30度
+        - 0.52359877559829   # +30度
+

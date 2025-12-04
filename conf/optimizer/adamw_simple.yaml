@@ -1,0 +1,7 @@
+# @package _group_
+# 简化的优化器配置 - 降低学习率，更稳定
+_target_: torch.optim.AdamW
+lr: 0.00005  # 降低学习率，从0.0001降到0.00005
+weight_decay: 0.01  # 添加权重衰减，防止过拟合
+betas: [0.9, 0.999]  # 默认的beta值
+

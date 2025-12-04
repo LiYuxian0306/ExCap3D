@@ -1,0 +1,14 @@
+# @package _group_
+# 禁用图像增强的配置（颜色增强）
+# 用于简化训练
+
+__version__: 0.4.5
+transform:
+  __class_fullname__: albumentations.core.composition.Compose
+  additional_targets: {}
+  bbox_params: null
+  keypoint_params: null
+  p: 1.0
+  transforms: []
+  # 空列表表示不进行任何颜色增强
+
