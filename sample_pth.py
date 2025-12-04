@@ -1,6 +1,15 @@
 import json
 from pathlib import Path
 
+try:
+    # 尝试导入 numpy._core，如果失败（说明是旧版 numpy），则进行映射
+    import numpy._core
+except ImportError:
+    # 如果当前环境是 NumPy 1.x，但数据是用 NumPy 2.x 保存的
+    # 我们将 numpy._core 映射到 numpy.core，以欺骗 pickle 加载器
+    if hasattr(numpy, 'core'):
+        sys.modules['numpy._core'] = numpy.core
+
 import numpy as np
 
 from joblib import Parallel, delayed
