@@ -3,6 +3,9 @@ from pathlib import Path
 
 import numpy as np
 
+if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
+    sys.modules['numpy._core'] = np.core
+
 from joblib import Parallel, delayed
 from loguru import logger
 import hydra
