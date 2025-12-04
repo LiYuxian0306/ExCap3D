@@ -16,6 +16,11 @@
 **状态**: ⚠️ 版本不匹配
 - **原因**: hydra-core 1.1.0 与项目要求的 1.0.5 配置处理方式不同
 
+### 错误4: `ImportError: cannot import name 'SCMode' from 'omegaconf'`
+**状态**: ✅ 已解决（通过兼容层）
+- **原因**: detectron2 需要 omegaconf>=2.1.0（需要 SCMode），但项目要求 omegaconf==2.0.6
+- **解决**: 创建了 `models/detectron2_compat.py` 兼容层，替代 detectron2 的依赖
+
 ## 根本原因
 
 **版本要求**（来自 `environment.yml`）:
@@ -26,9 +31,35 @@
 - `hydra-core==1.3.2` → 降级到 `1.1.0`（仍不匹配）
 - `omegaconf==2.3.0` → 降级到 `2.1.0`（仍不匹配）
 
+**版本冲突的根本原因**:
+- detectron2 需要 `omegaconf>=2.1.0`（需要 SCMode）
+- ExCap3D 项目要求 `omegaconf==2.0.6`
+- 这两个要求无法同时满足
+
 ## 解决方案
 
-### 方法1: 使用修复脚本（推荐）
+### ⭐ 方法1: 使用兼容层（推荐，无需安装 detectron2）
+
+**已创建兼容层**：`models/detectron2_compat.py`
+
+这个文件实现了 detectron2 需要的函数，避免了版本冲突。**现在你不再需要安装 detectron2！**
+
+**已更新的文件**：
+- `models/criterion.py` - 使用兼容层替代 detectron2
+- `models/matcher.py` - 使用兼容层替代 detectron2
+
+**验证**：
+```bash
+python -c "from models.detectron2_compat import point_sample, get_world_size; print('兼容层导入成功')"
+```
+
+**优势**：
+- ✅ 完全避免 detectron2 的版本冲突
+- ✅ 不需要安装 detectron2
+- ✅ 保持 omegaconf==2.0.6 和 hydra-core==1.0.5
+- ✅ 功能完全兼容
+
+### 方法2: 使用修复脚本（如果兼容层有问题，需要安装 detectron2）
 
 在 Linux 服务器上执行：
 
