@@ -89,14 +89,25 @@ class ScannetppPreprocessing(BasePreprocessing):
         
         pth_data = torch.load(filepath)
         # read everything from pth file
-        coords = pth_data['vtx_coords']
-        colors = pth_data['vtx_colors']
-        normals = pth_data['vtx_normals']
-        segment_ids = pth_data['vtx_segment_ids']
-        semantic_labels = pth_data['vtx_labels'].astype(np.float32)
+        # Support both vtx_* and sampled_* key names for compatibility
+        # Priority: vtx_* > sampled_* (vtx_* is the standard after sample_pth.py processing)
+        def get_key(key_vtx, key_sampled):
+            """Get value using vtx_* key first, fallback to sampled_* key if not found."""
+            if key_vtx in pth_data:
+                return pth_data[key_vtx]
+            elif key_sampled in pth_data:
+                return pth_data[key_sampled]
+            else:
+                raise KeyError(f"Neither '{key_vtx}' nor '{key_sampled}' found in pth file {filepath}")
+        
+        coords = get_key('vtx_coords', 'sampled_coords')
+        colors = get_key('vtx_colors', 'sampled_colors')
+        normals = get_key('vtx_normals', 'sampled_normals')
+        segment_ids = get_key('vtx_segment_ids', 'sampled_segment_ids')
+        semantic_labels = get_key('vtx_labels', 'sampled_labels').astype(np.float32)
         # keep vtx_instance_anno_id so that it can be used to match with caption data, etc
         # not instance labels
-        instance_labels = pth_data['vtx_instance_anno_id'].astype(np.float32)
+        instance_labels = get_key('vtx_instance_anno_id', 'sampled_instance_anno_id').astype(np.float32)
         
         file_len = len(coords)
         # add dummy information
