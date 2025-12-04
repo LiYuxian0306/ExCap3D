@@ -60,24 +60,6 @@ def process_file(scene_id, cfg):
     # read each pth file
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
-    if 'vtx_coords' not in pth_data:
-        print(f"\n[ERROR] File: {fname}")
-        print(f"[ERROR] 期望找到 'vtx_coords'，但未找到。")
-        print(f"[ERROR] 现有的键 (Keys): {list(pth_data.keys())}")
-        
-        # 尝试自动修复：常见的替代名称
-        possible_keys = ['coords', 'xyz', 'points', 'vertices']
-        found_alt = None
-        for k in possible_keys:
-            if k in pth_data:
-                found_alt = k
-                break
-        
-        if found_alt:
-            print(f"[INFO] 自动切换为使用键: '{found_alt}'")
-            pth_data['vtx_coords'] = pth_data[found_alt] # 建立映射
-        else:
-            raise KeyError(f"无法在 {fname} 中找到坐标数据，请检查上一步数据生成过程。")
 
     if cfg.segments_dir is not None:
         # .segs.json / .json / something else
@@ -104,7 +86,7 @@ def process_file(scene_id, cfg):
     mesh = o3d.io.read_triangle_mesh(str(mesh_path))
 
     # sample points, these are the new coordinates
-    pc = mesh.sample_points_uniformly(int(cfg.sample_factor * len(pth_data['vtx_coords'])))	
+    pc = mesh.sample_points_uniformly(int(cfg.sample_factor * len(pth_data['sampled_coords'])))	
 
     tree = KDTree(mesh.vertices)
     # for each sampled point, get the nearest original vertex
@@ -114,9 +96,23 @@ def process_file(scene_id, cfg):
     new_pth_data = {'scene_id': pth_data['scene_id']}
     # keys to sample data on
     sample_keys = [key for key in pth_data.keys() if key not in cfg.ignore_keys]
+    
+    # mapping from sampled_* keys to vtx_* keys for compatibility with preprocessing
+    key_mapping = {
+        'sampled_coords': 'vtx_coords',
+        'sampled_colors': 'vtx_colors',
+        'sampled_normals': 'vtx_normals',
+        'sampled_labels': 'vtx_labels',
+        'sampled_num_labels': 'vtx_num_labels',
+        'sampled_instance_labels': 'vtx_instance_labels',
+        'sampled_instance_anno_id': 'vtx_instance_anno_id',
+    }
+    
     # use sample indices and get properties on sampled points
     for key in sample_keys:
-        new_pth_data[key] = pth_data[key][ndx]
+        # map key name if needed
+        output_key = key_mapping.get(key, key)
+        new_pth_data[output_key] = pth_data[key][ndx]
 
     # handle segment IDs
     if cfg.use_small_mesh_segments:
