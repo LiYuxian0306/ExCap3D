@@ -25,6 +25,7 @@ set -ex
 # 1. n_jobs=1 : 逻辑上告诉程序只用一个作业
 # 2. sequential=True : 关键参数！这会触发 Python 脚本里的 for 循环，彻底避开多进程库
 # ------------------------------------------------------------------
+which python
 python sample_pth.py \
     n_jobs=1 \
     sequential=True \
