@@ -13,7 +13,6 @@
 # cpus-per-task 也可以适当降低，因为Python里限制了线程数。
 
 eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
-conda activate mask3d_cuda113
 
 # 虽然 Python 脚本里强制设为了 1，但这里保留也没坏处
 export OMP_NUM_THREADS=1
