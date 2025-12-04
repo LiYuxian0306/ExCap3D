@@ -61,7 +61,7 @@ def process_file(scene_id, cfg):
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
     if 'vtx_coords' not in pth_data:
-        print(f"\n[ERROR] File: {pth_path}")
+        print(f"\n[ERROR] File: {fname}")
         print(f"[ERROR] 期望找到 'vtx_coords'，但未找到。")
         print(f"[ERROR] 现有的键 (Keys): {list(pth_data.keys())}")
         
