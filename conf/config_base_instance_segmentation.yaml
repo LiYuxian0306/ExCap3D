@@ -108,7 +108,9 @@ general:
   # how many predicted masks to keep per scene (why is it called image?)
   topk_per_image: 100
   ignore_mask_idx: []
-  max_batch_size: 2
+  max_batch_size: 2000000  # Maximum number of points per batch (not samples). 
+                           # Should be >= clip_points * batch_size
+                           # Default: 2M points (for clip_points=300k, batch_size=6)
 
   show_sample_stats: true
 
