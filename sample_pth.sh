@@ -26,22 +26,22 @@ set -ex
 # 2. sequential=True : 关键参数！这会触发 Python 脚本里的 for 循环，彻底避开多进程库
 # ------------------------------------------------------------------
 which python
-/disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python sample_pth.py \
-    n_jobs=1 \
-    sequential=True \
-    data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
-    input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked/ \
-    list_path=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/all_list.txt \
-    segments_dir=null \
-    output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
-    sample_factor=0.1 \
+#/disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python sample_pth.py \
+    #n_jobs=1 \
+    #sequential=True \
+    #data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
+    #input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/#semantic_processed_unchunked/ \
+    #list_path=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/all_list.txt \
+    #segments_dir=null \
+    #output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
+    #sample_factor=0.1 \
 
 # ------------------------------------------------------------------
 # 步骤 2: Mask3D 预处理 (Preprocessing)
 # 建议：既然只有 10 个场景，为了稳妥，建议把这一步也改成单进程。
 # 虽然这个脚本可能没有 sequential 参数，但通常将 n_jobs 设为 1 就能变成单进程。
 # ------------------------------------------------------------------
-python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
+/disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
     --n_jobs=1 \
     --data_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     --save_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final/ \
