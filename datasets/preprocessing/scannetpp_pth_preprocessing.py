@@ -102,7 +102,16 @@ class ScannetppPreprocessing(BasePreprocessing):
         
         coords = get_key('vtx_coords', 'sampled_coords')
         colors = get_key('vtx_colors', 'sampled_colors')
-        normals = get_key('vtx_normals', 'sampled_normals')
+        
+        # --- 修改开始: 处理缺失的法向量 ---
+        try:
+            normals = get_key('vtx_normals', 'sampled_normals')
+        except KeyError:
+            # 如果找不到法向量，生成一个与 coords 形状相同的全0数组
+            # logger.warning(f"Normals not found for {scene}, filling with zeros.") # 可选：打印警告
+            normals = np.zeros_like(coords, dtype=np.float32)
+        # --- 修改结束 ---
+
         segment_ids = get_key('vtx_segment_ids', 'sampled_segment_ids')
         semantic_labels = get_key('vtx_labels', 'sampled_labels').astype(np.float32)
         # keep vtx_instance_anno_id so that it can be used to match with caption data, etc
