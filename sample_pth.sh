@@ -26,7 +26,7 @@ set -ex
 # 2. sequential=True : 关键参数！这会触发 Python 脚本里的 for 循环，彻底避开多进程库
 # ------------------------------------------------------------------
 which python
-python sample_pth.py \
+/disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python sample_pth.py \
     n_jobs=1 \
     sequential=True \
     data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
