@@ -119,7 +119,20 @@ def check_coordinate_scale(data_dir, train_list, voxel_size=0.02):
             traceback.print_exc()
 
 
-def check_label_mapping(data_dir, train_list, ignore_label=255, num_labels=20):
+def read_class_file(class_file_path):
+    """从类文件中读取类别列表"""
+    if class_file_path is None or not Path(class_file_path).exists():
+        return None
+    try:
+        with open(class_file_path, 'r') as f:
+            classes = [line.strip() for line in f if line.strip()]
+        return classes
+    except:
+        return None
+
+
+def check_label_mapping(data_dir, train_list, ignore_label=255, num_labels=20, 
+                        semantic_classes_file=None, instance_classes_file=None, config=None):
     """
     检查2: 标签ID映射错误
     
@@ -128,6 +141,39 @@ def check_label_mapping(data_dir, train_list, ignore_label=255, num_labels=20):
     print("\n" + "=" * 80)
     print("检查2: 标签ID映射错误")
     print("=" * 80)
+    
+    # 尝试从配置文件或类文件自动读取参数
+    if config is not None:
+        try:
+            cfg = OmegaConf.load(config)
+            if ignore_label == 255:  # 如果使用默认值，尝试从配置读取
+                ignore_label = cfg.data.get('ignore_label', ignore_label)
+            if num_labels == 20:  # 如果使用默认值，尝试从配置读取
+                num_labels = cfg.data.get('num_labels', num_labels)
+            if semantic_classes_file is None:
+                semantic_classes_file = cfg.data.get('semantic_classes_file', None)
+            if instance_classes_file is None:
+                instance_classes_file = cfg.data.get('instance_classes_file', None)
+        except:
+            pass
+    
+    # 从类文件读取实际的类别数量
+    if instance_classes_file:
+        instance_classes = read_class_file(instance_classes_file)
+        if instance_classes:
+            num_labels = len(instance_classes)
+            print(f"\n从实例类文件读取: {instance_classes_file}")
+            print(f"  实例类别数: {num_labels}")
+    
+    if semantic_classes_file:
+        semantic_classes = read_class_file(semantic_classes_file)
+        if semantic_classes:
+            print(f"\n从语义类文件读取: {semantic_classes_file}")
+            print(f"  语义类别数: {len(semantic_classes)}")
+    
+    print(f"\n使用的参数:")
+    print(f"  ignore_label: {ignore_label}")
+    print(f"  num_labels: {num_labels} (有效标签ID范围: 0-{num_labels-1})")
     
     data_dir = Path(data_dir)
     train_list = Path(train_list)
@@ -183,13 +229,31 @@ def check_label_mapping(data_dir, train_list, ignore_label=255, num_labels=20):
         print(f"    非ignore标签数量: {(semantic_labels != ignore_label).sum()}")
         
         # 检查是否有超出范围的标签
-        valid_labels = set(range(num_labels)) | {ignore_label}
-        invalid_labels = set(unique_sem) - valid_labels
-        if invalid_labels:
-            print(f"  ✗ 错误: 发现无效的语义标签ID: {sorted(invalid_labels)}")
-            print(f"     有效范围应该是: 0-{num_labels-1} 或 {ignore_label}(ignore)")
+        # 对于scannetpp，原始标签ID可能不是0-N，而是原始ID（如5, 24, 27, 55等）
+        # 这些标签会在数据加载时被映射到0-N范围
+        # 所以这里只检查是否有ignore_label，其他标签都认为是有效的原始ID
+        non_ignore_labels = unique_sem[unique_sem != ignore_label]
+        
+        if len(non_ignore_labels) > 0:
+            max_label = non_ignore_labels.max()
+            min_label = non_ignore_labels.min()
+            
+            # 如果标签ID范围很大（>100），说明是原始ID，不是映射后的ID
+            if max_label > 100 or min_label < 0:
+                print(f"  ℹ️  信息: 检测到原始标签ID（范围: {min_label}-{max_label}）")
+                print(f"     这些标签会在数据加载时映射到0-{num_labels-1}范围")
+                print(f"     这是正常的，只要数据加载器正确映射即可")
+            else:
+                # 如果是映射后的ID，检查范围
+                valid_labels = set(range(num_labels)) | {ignore_label}
+                invalid_labels = set(unique_sem) - valid_labels
+                if invalid_labels:
+                    print(f"  ✗ 错误: 发现无效的语义标签ID: {sorted(invalid_labels)}")
+                    print(f"     有效范围应该是: 0-{num_labels-1} 或 {ignore_label}(ignore)")
+                else:
+                    print(f"  ✓ 所有语义标签ID都在有效范围内")
         else:
-            print(f"  ✓ 所有语义标签ID都在有效范围内")
+            print(f"  ⚠️  警告: 所有标签都是ignore_label，没有有效标签！")
         
         # 检查实例标签
         unique_inst = np.unique(instance_labels)
@@ -200,11 +264,13 @@ def check_label_mapping(data_dir, train_list, ignore_label=255, num_labels=20):
         print(f"    实例ID范围: [{instance_labels.min()}, {instance_labels.max()}]")
         print(f"    ignore_label ({ignore_label}) 的数量: {(instance_labels == ignore_label).sum()}")
         print(f"    负实例ID (<0) 的数量: {(instance_labels < 0).sum()}")
-        print(f"    有效实例数量: {(instance_labels >= 0) & (instance_labels != ignore_label).sum()}")
+        valid_instances = (instance_labels >= 0) & (instance_labels != ignore_label)
+        print(f"    有效实例数量: {valid_instances.sum()}")
         
         # 检查语义-实例对应关系
         print(f"\n  语义-实例对应关系 (前10个实例):")
-        valid_instances = instance_labels[(instance_labels >= 0) & (instance_labels != ignore_label)]
+        valid_inst_mask = (instance_labels >= 0) & (instance_labels != ignore_label)
+        valid_instances = instance_labels[valid_inst_mask]
         if len(valid_instances) > 0:
             unique_valid_inst = np.unique(valid_instances)[:10]
             for inst_id in unique_valid_inst:
@@ -603,8 +669,14 @@ def main():
     parser.add_argument("--save-root", type=str,
                        help="Checkpoint保存根目录（可选，用于查找评估输出）")
     parser.add_argument("--voxel-size", type=float, default=0.02, help="体素大小（默认0.02）")
-    parser.add_argument("--ignore-label", type=int, default=255, help="忽略标签ID（默认255）")
-    parser.add_argument("--num-labels", type=int, default=20, help="语义类别数（默认20）")
+    parser.add_argument("--ignore-label", type=int, default=None, 
+                       help="忽略标签ID（默认None，会从配置文件自动读取，如果未找到则使用255）")
+    parser.add_argument("--num-labels", type=int, default=None,
+                       help="语义类别数（默认None，会从配置文件或类文件自动读取，如果未找到则使用20）")
+    parser.add_argument("--semantic-classes-file", type=str, default=None,
+                       help="语义类别文件路径（用于自动确定num_labels）")
+    parser.add_argument("--instance-classes-file", type=str, default=None,
+                       help="实例类别文件路径（用于自动确定num_labels）")
     
     args = parser.parse_args()
     
@@ -645,11 +717,57 @@ def main():
             except:
                 pass
     
+    # 从配置文件读取参数（如果提供了配置文件）
+    ignore_label = args.ignore_label
+    num_labels = args.num_labels
+    semantic_classes_file = args.semantic_classes_file
+    instance_classes_file = args.instance_classes_file
+    
+    if args.config:
+        try:
+            cfg = OmegaConf.load(args.config)
+            if ignore_label is None:
+                ignore_label = cfg.data.get('ignore_label', 255)
+            if num_labels is None:
+                num_labels = cfg.data.get('num_labels', 20)
+            if semantic_classes_file is None:
+                semantic_classes_file = cfg.data.get('semantic_classes_file', None)
+            if instance_classes_file is None:
+                instance_classes_file = cfg.data.get('instance_classes_file', None)
+        except Exception as e:
+            print(f"⚠️  加载配置文件失败: {e}")
+            if ignore_label is None:
+                ignore_label = 255
+            if num_labels is None:
+                num_labels = 20
+    
+    # 如果仍未设置，使用默认值
+    if ignore_label is None:
+        ignore_label = 255
+    if num_labels is None:
+        num_labels = 20
+    
+    # 从类文件读取实际的类别数量
+    if instance_classes_file:
+        instance_classes = read_class_file(instance_classes_file)
+        if instance_classes:
+            num_labels = len(instance_classes)
+            print(f"\n从实例类文件自动读取类别数: {num_labels}")
+    
+    print("\n使用的参数:")
+    print(f"  ignore_label: {ignore_label}")
+    print(f"  num_labels: {num_labels}")
+    if semantic_classes_file:
+        print(f"  semantic_classes_file: {semantic_classes_file}")
+    if instance_classes_file:
+        print(f"  instance_classes_file: {instance_classes_file}")
+    
     print("\n开始检查所有可能导致AP=0的问题...\n")
     
     # 执行所有检查
     check_coordinate_scale(args.data_dir, args.train_list, args.voxel_size)
-    check_label_mapping(args.data_dir, args.train_list, args.ignore_label, args.num_labels)
+    check_label_mapping(args.data_dir, args.train_list, ignore_label, num_labels,
+                       semantic_classes_file, instance_classes_file, args.config)
     check_score_threshold(args.config)
     check_checkpoint_loss(args.checkpoint)
     check_data_loading(args.data_dir, args.train_list)
