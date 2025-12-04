@@ -60,6 +60,25 @@ def process_file(scene_id, cfg):
     # read each pth file
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
+    if 'vtx_coords' not in pth_data:
+        print(f"\n[ERROR] File: {pth_path}")
+        print(f"[ERROR] 期望找到 'vtx_coords'，但未找到。")
+        print(f"[ERROR] 现有的键 (Keys): {list(pth_data.keys())}")
+        
+        # 尝试自动修复：常见的替代名称
+        possible_keys = ['coords', 'xyz', 'points', 'vertices']
+        found_alt = None
+        for k in possible_keys:
+            if k in pth_data:
+                found_alt = k
+                break
+        
+        if found_alt:
+            print(f"[INFO] 自动切换为使用键: '{found_alt}'")
+            pth_data['vtx_coords'] = pth_data[found_alt] # 建立映射
+        else:
+            raise KeyError(f"无法在 {fname} 中找到坐标数据，请检查上一步数据生成过程。")
+
     if cfg.segments_dir is not None:
         # .segs.json / .json / something else
         seg_file = Path(cfg.segments_dir) / f'{scene_id}{cfg.segfile_ext}'
