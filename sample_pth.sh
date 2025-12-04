@@ -1,39 +1,34 @@
 #!/bin/bash
 
-
 #SBATCH --job-name=m3d_sample_pth 
 #SBATCH --mail-type=END,FAIL          
 #SBATCH --mail-user=chandan.yeshwanth@tum.de 
-#SBATCH --mem=128gb                     
-#SBATCH --cpus-per-task=8
-
+#SBATCH --mem=64gb                     
+#SBATCH --cpus-per-task=4
 #SBATCH --time=4-00:00:00              
 #SBATCH --output=/rhome/cyeshwanth/output/m3d_sample_pth_%j.log
 #SBATCH --partition=submit  
 
+# 注意：因为改成了单进程，内存需求其实降低了，128gb可能有点浪费，但保留着也没事。
+# cpus-per-task 也可以适当降低，因为Python里限制了线程数。
+
 eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
 conda activate mask3d_cuda113
 
-export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
+# 虽然 Python 脚本里强制设为了 1，但这里保留也没坏处
+export OMP_NUM_THREADS=1
 
 set -ex
 
-# Skip run_seg_parallel.py - using segments.json directly from scannetpp data directory
-# python run_seg_parallel.py preprocess \
-#     --data_root=/home/kylin/datasets/scannetpp/scannetpp/data/ \
-#     --list_file=/home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/train.txt \
-#     --segmentMinVertex=40 \
-#     --out_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_segment/ \
-
-# create pth files with on sampled points - can be used for training anything
-# segments_dir is set to null to read segments.json directly from scannetpp scene directory
-# NOTE: Update the following paths according to your setup:
-#   - data_dir: scannetpp data root directory (confirmed: /home/kylin/datasets/scannetpp/scannetpp/data/)
-#   - input_pth_dir: directory containing semantic_processed pth files (NEED TO CONFIRM)
-#   - list_path: path to train_list.txt or test_list.txt (confirmed: in ExCap3D root)
-#   - output_pth_dir: output directory for sampled pth files (NEED TO CONFIRM)
+# ------------------------------------------------------------------
+# 步骤 1: 采样点云 (Sample Points)
+# 修改点：
+# 1. n_jobs=1 : 逻辑上告诉程序只用一个作业
+# 2. sequential=True : 关键参数！这会触发 Python 脚本里的 for 循环，彻底避开多进程库
+# ------------------------------------------------------------------
 python sample_pth.py \
-    n_jobs=8 \
+    n_jobs=1 \
+    sequential=True \
     data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
     input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked/ \
     list_path=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/all_list.txt \
@@ -41,16 +36,14 @@ python sample_pth.py \
     output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     sample_factor=0.1 \
 
-# prepare data in mask3d format - npy, with database files, etc
-# NOTE: Update the following paths according to your setup:
-#   - data_dir: should be the same as output_pth_dir above (NEED TO CONFIRM)
-#   - save_dir: output directory for final mask3d format data (NEED TO CONFIRM)
-#   - train_list: path to train_list.txt (confirmed: in ExCap3D root)
-#   - val_list: path to test_list.txt (confirmed: in ExCap3D root)
+# ------------------------------------------------------------------
+# 步骤 2: Mask3D 预处理 (Preprocessing)
+# 建议：既然只有 10 个场景，为了稳妥，建议把这一步也改成单进程。
+# 虽然这个脚本可能没有 sequential 参数，但通常将 n_jobs 设为 1 就能变成单进程。
+# ------------------------------------------------------------------
 python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
-    --n_jobs=8 \
+    --n_jobs=1 \
     --data_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     --save_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final/ \
     --train_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt \
     --val_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt \
-
