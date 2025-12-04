@@ -1,19 +1,17 @@
+import sys
 import json
 from pathlib import Path
-import sys
 
 import numpy as np
 
+# --- 全局补丁 (针对主进程) ---
+# 必须使用 'numpy._core' 字符串，不能用 'np._core'
 try:
-    # 尝试导入 numpy._core，如果失败（说明是旧版 numpy），则进行映射
-    import np._core
+    import numpy._core
 except ImportError:
-    # 如果当前环境是 NumPy 1.x，但数据是用 NumPy 2.x 保存的
-    # 我们将 numpy._core 映射到 numpy.core，以欺骗 pickle 加载器
     if hasattr(np, 'core'):
-        sys.modules['np._core'] = np.core
-
-
+        sys.modules['numpy._core'] = np.core
+# ---------------------------
 
 from joblib import Parallel, delayed
 from loguru import logger
@@ -31,14 +29,12 @@ def read_txt_list(path):
         return f.read().splitlines()
 
 
-@hydra.main(
-config_path="conf", config_name="sample_pth.yaml")
+@hydra.main(config_path="conf", config_name="sample_pth.yaml")
 def main(cfg: DictConfig):
     cfg.scene_ids = read_txt_list(cfg.list_path)
 
     Path(cfg.output_pth_dir).mkdir(exist_ok=True)
     logger.info(f"Tasks: {len(cfg.scene_ids)}")
-
 
     if cfg.sequential:
         for ndx, scene_id in enumerate(cfg.scene_ids):
@@ -52,10 +48,18 @@ def main(cfg: DictConfig):
 
 # process one scene id
 def process_file(scene_id, cfg):
+    # --- 局部补丁 (针对 Joblib 子进程) ---
+    # 确保在子进程中，torch.load 之前，numpy._core 已经被正确映射
+    # 这是为了防止多进程环境下全局补丁未生效
+    if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
+        sys.modules['numpy._core'] = np.core
+    # ----------------------------------
+
     fname = f'{scene_id}.pth'
     scene = ScannetppScene_Release(scene_id, data_root=cfg.data_dir)
 
     # read each pth file
+    # 这里会触发 pickle 加载，需要 numpy._core 存在
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)
 
     # Check if segments_dir is None or "null" (string), then read from scannetpp scene directory
