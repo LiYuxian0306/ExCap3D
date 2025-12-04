@@ -7,8 +7,15 @@ faulthandler.enable()
 
 import numpy as np
 
-if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
-    sys.modules['numpy._core'] = np.core
+if hasattr(np, 'core'):
+    # 1. 映射 numpy._core -> np.core
+    if 'numpy._core' not in sys.modules:
+        sys.modules['numpy._core'] = np.core
+    
+    # 2. 映射 numpy._core.multiarray -> np.core.multiarray
+    # 这一步是解决 torch.load 报错的关键
+    if hasattr(np.core, 'multiarray') and 'numpy._core.multiarray' not in sys.modules:
+        sys.modules['numpy._core.multiarray'] = np.core.multiarray
 
 from joblib import Parallel, delayed
 from loguru import logger
