@@ -36,7 +36,7 @@ python sample_pth.py \
     n_jobs=8 \
     data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
     input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked/ \
-    list_path=/home/kylin/lyx/project_study/ExCap3D/ExCap3D/train_list.txt \
+    list_path=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/all_list.txt \
     segments_dir=null \
     output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     sample_factor=0.1 \
@@ -51,6 +51,6 @@ python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
     --n_jobs=8 \
     --data_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     --save_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final/ \
-    --train_list=/home/kylin/lyx/project_study/ExCap3D/ExCap3D/train_list.txt \
-    --val_list=/home/kylin/lyx/project_study/ExCap3D/ExCap3D/test_list.txt \
+    --train_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt \
+    --val_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt \
 
