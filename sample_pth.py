@@ -2,6 +2,9 @@ import json
 from pathlib import Path
 import sys
 
+import faulthandler
+faulthandler.enable()
+
 import numpy as np
 
 if 'numpy._core' not in sys.modules and hasattr(np, 'core'):
