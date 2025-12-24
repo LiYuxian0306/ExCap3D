@@ -20,6 +20,7 @@ import pytorch_lightning
 def read_txt_list(path):
     with open(path) as f: 
         lines = f.read().splitlines()
+        #读取文本文件并按行分割成列表
 
     return lines
 
@@ -33,22 +34,22 @@ def get_parameters(cfg: DictConfig):
     # filter_out_classes: used in voxelizecollate
     # label_offset: subtracted and clamped in voxelizecollate for scannet. for ours, use mapping, dont subtract
     if cfg.data.get('semantic_classes_file', None) and cfg.data.get('instance_classes_file', None):
-        # print('*************************************')
-        # print('Setting up ScannetPP dataset')
+        #print('*************************************')
+        #print('Setting up ScannetPP dataset')
         semantic_classes = read_txt_list(cfg.data.semantic_classes_file)
         instance_classes = read_txt_list(cfg.data.instance_classes_file)
-        # print('Num semantic classes:', len(semantic_classes))
-        # print('Num instance classes:', len(instance_classes))
+        #print('Num semantic classes:', len(semantic_classes))
+        #print('Num instance classes:', len(instance_classes))
 
         # ignore_sem_classes = [i for i, c in enumerate(semantic_classes) if c not in instance_classes]
         # sem classes to ignore for instances AFTER MAPPING (not in the original labels)
-        # ours: when mapping to only instance classes, dont filter out anything
+        # ours: when mapping to only instance classes, dont filter out anything 现在在这里不filter out classes了？之前的scannetpp操作里filter过一次了吗？
         ignore_sem_classes = []
         # print('****** filter_out_classes:', ignore_sem_classes)
 
         # set filter_out_classes, label_offset, indoor/num_labels, general.num_targets
         # for train and val
-        cfg.data.train_dataset.filter_out_classes = ignore_sem_classes
+        cfg.data.train_dataset.filter_out_classes = ignore_sem_classes  #在下方指定路径的config_base_instance_segmentation.yaml文件里面，有提到
         cfg.data.validation_dataset.filter_out_classes = ignore_sem_classes
         
         num_targets = len(instance_classes) + 1
@@ -67,7 +68,7 @@ def get_parameters(cfg: DictConfig):
     logger = logging.getLogger(__name__)
     load_dotenv(".env")
 
-    # generate a random str for experiment name
+    # generate a random str for experiment name, 用于区分每个实验
     random_str = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5))
 
     # parsing input parameters
@@ -198,18 +199,18 @@ def train(cfg: DictConfig):
         callbacks.append(cb_obj)
 
     runner = Trainer(
-        enable_checkpointing=not cfg.general.no_ckpt,
-        logger=loggers,
-        devices=cfg.general.gpus,
-        callbacks=callbacks,
+        enable_checkpointing=not cfg.general.no_ckpt, #是否允许自动存档
+        logger=loggers,  #记录训练数据
+        devices=cfg.general.gpus,  #使用多少gpu
+        callbacks=callbacks, 
         # weights_save_path=str(cfg.general.save_dir), # pl 1.7.0
         default_root_dir=str(cfg.general.save_dir), # pl 1.8.0
         **cfg.trainer,
     )
-    runner.fit(model)
+    runner.fit(model)  #开始训练
 
 
-@hydra.main(
+@hydra.main( #把这个函数变成一个hydra应用，这样主要是能在terminal里直接修改参数
     config_path="conf", config_name="config_base_instance_segmentation.yaml"
 )
 def test(cfg: DictConfig):

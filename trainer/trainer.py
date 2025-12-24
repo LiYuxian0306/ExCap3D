@@ -45,7 +45,7 @@ from scipy.spatial import KDTree
 from third_party.cuda_utils.interpolate.cuda_utils import TrilinearInterpolateFeatures
 
 
-@functools.lru_cache(20)
+@functools.lru_cache(20)    #这个装饰器能缓存函数的返回结果
 def get_evenly_distributed_colors(
     count: int,
 ) -> List[Tuple[np.uint8, np.uint8, np.uint8]]:
@@ -314,14 +314,14 @@ class InstanceSegmentation(pl.LightningModule):
                 extra_feats = self.feat2d_projector(extra_feats.to(self.device)).cpu()
             data.features = torch.cat([data.features, extra_feats], dim=1)
 
-        # goes to device here, was on cpu till now!
+        # goes to device here, was on cpu till now! 准备 MinkowskiEngine 稀疏张量
         data = ME.SparseTensor(
             coordinates=data.coordinates,
             features=data.features,
             device=self.device,
         )
 
-        # use the training target, dont run instance seg model
+        # use the training target, dont run instance seg model; 
         if self.config.general.eval_against_target:
             output = self.get_output_from_target(target)
         else:
