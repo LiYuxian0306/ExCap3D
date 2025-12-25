@@ -3,7 +3,7 @@
   project: ${general.project_name}
   name: ${general.experiment_name}
   save_dir: ${general.save_dir}
-  entity: "u3629246"
+  #entity: "u3629246"
   resume: "allow"
   id: ${general.experiment_name}
   notes: ${general.notes}
