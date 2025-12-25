@@ -2752,6 +2752,11 @@ class InstanceSegmentation(pl.LightningModule):
         optimizers.append(main_optimizer)
 
         if 'scheduler' in self.config:
+            # 容错机制：在 DDP 模式下，train_dataset 可能还没有初始化
+            # 先调用 prepare_data 确保 dataset 存在
+            if not hasattr(self, 'train_dataset'):
+                self.prepare_data()
+            
             train_loader_len = len(self.train_dataloader())
             if "steps_per_epoch" in self.config.scheduler.scheduler.keys():
                 self.config.scheduler.scheduler.steps_per_epoch = train_loader_len
