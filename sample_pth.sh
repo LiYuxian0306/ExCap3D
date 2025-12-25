@@ -16,6 +16,9 @@ eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
 # 虽然 Python 脚本里强制设为了 1，但这里保留也没坏处
 export OMP_NUM_THREADS=1
 
+# 添加 scannetpp 到 Python 搜索路径（sample_pth.py 需要导入 scannetpp 模块）
+export PYTHONPATH=/home/kylin/lyx/project_study/scannetpp:$PYTHONPATH
+
 set -ex
 
 # ------------------------------------------------------------------
