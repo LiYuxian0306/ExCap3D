@@ -32,8 +32,8 @@ which python
     n_jobs=1 \
     sequential=True \
     data_dir=/home/kylin/datasets/scannetpp_v2/scannetpp/data/ \
-    input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/chunked/ \
-    list_path=/home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/train_chunked.txt \
+    input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked/ \
+    list_path=/home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/train.txt \
     segments_dir=null \
     output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/sampled/ \
     sample_factor=0.8 \
