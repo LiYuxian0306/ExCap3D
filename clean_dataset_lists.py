@@ -95,25 +95,23 @@ def clean_list(list_path, data_root, mode):
 
 if __name__ == "__main__":
     # Configuration
-    # Use paths relative to this script file
-    script_dir = Path(__file__).parent.resolve()
     
-    # Assuming the standard structure:
-    # ExCap3D/
-    #   ExCap3D/ (code_root, where this script is)
-    #   data/
-    #     processed/ (data_root)
+    # 优先使用用户指定的服务器路径 / Prioritize user-specified server paths
+    server_data_root = Path("/home/kylin/lyx/project_study/ExCap3D/data/processed")
+    server_code_root = Path("/home/kylin/lyx/project_study/ExCap3D/code/excap3d")
+
+    if server_data_root.exists():
+        data_root = server_data_root
+        code_root = server_code_root
+    else:
+        # Fallback to relative paths for local testing or if server path not found
+        script_dir = Path(__file__).parent.resolve()
+        code_root = script_dir
+        # Adjust this if your data is stored elsewhere!
+        data_root = code_root.parent / "data" / "processed"
     
-    code_root = script_dir
-    # Go up one level to ExCap3D root, then into data/processed
-    # Adjust this if your data is stored elsewhere!
-    # Based on user workspace: /Users/liyuxian/Desktop/AI_paper_study/Project_study/ExCap3D/ExCap3D
-    # Data seems to be at /Users/liyuxian/Desktop/AI_paper_study/Project_study/ExCap3D/data/processed
-    # So we go up one level from code_root
-    data_root = code_root.parent / "data" / "processed"
-    
-    print(f"Code root: {code_root}")
-    print(f"Data root: {data_root}")
+    print(f"Using Code Root: {code_root}")
+    print(f"Using Data Root: {data_root}")
     
     train_list = code_root / "train_list.txt"
     val_list = code_root / "val_list.txt"
