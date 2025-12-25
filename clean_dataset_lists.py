@@ -95,11 +95,28 @@ def clean_list(list_path, data_root, mode):
 
 if __name__ == "__main__":
     # Configuration
-    data_root = "/home/kylin/lyx/project_study/ExCap3D/data/processed"
-    code_root = "/home/kylin/lyx/project_study/ExCap3D/code/excap3d"
+    # Use paths relative to this script file
+    script_dir = Path(__file__).parent.resolve()
     
-    train_list = Path(code_root) / "train_list.txt"
-    val_list = Path(code_root) / "val_list.txt"
+    # Assuming the standard structure:
+    # ExCap3D/
+    #   ExCap3D/ (code_root, where this script is)
+    #   data/
+    #     processed/ (data_root)
+    
+    code_root = script_dir
+    # Go up one level to ExCap3D root, then into data/processed
+    # Adjust this if your data is stored elsewhere!
+    # Based on user workspace: /Users/liyuxian/Desktop/AI_paper_study/Project_study/ExCap3D/ExCap3D
+    # Data seems to be at /Users/liyuxian/Desktop/AI_paper_study/Project_study/ExCap3D/data/processed
+    # So we go up one level from code_root
+    data_root = code_root.parent / "data" / "processed"
+    
+    print(f"Code root: {code_root}")
+    print(f"Data root: {data_root}")
+    
+    train_list = code_root / "train_list.txt"
+    val_list = code_root / "val_list.txt"
     
     # Check train
     clean_list(train_list, data_root, "train")
