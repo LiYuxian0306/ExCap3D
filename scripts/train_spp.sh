@@ -35,7 +35,7 @@ echo "Running on $(hostname)"
     caption_model.class_weights_file=null \
     data.batch_size=4 \
     general.max_batch_size=1000000 \
-    trainer.strategy=ddp \
+    +trainer.strategy=ddp \
     'general.wandb_group="train instance segmentation"' \
     'general.notes="train with 4 GPUs"' \
     
