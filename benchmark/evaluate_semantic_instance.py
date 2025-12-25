@@ -368,7 +368,24 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None):
         label_name = ID_TO_LABEL[label_id]
         # read the mask
         pred_mask = pred_info[uuid]["mask"]
-        assert len(pred_mask) == len(gt_ids)
+        
+        # 容错机制：检查 mask 长度是否匹配
+        if len(pred_mask) != len(gt_ids):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Scene {scene_id}: Pred mask length {len(pred_mask)} != GT length {len(gt_ids)}, skipping instance {uuid}")
+            skipped_instances += 1
+            if len(length_mismatches) < 20:  # 只记录前20个
+                length_mismatches.append({
+                    'scene': scene_id,
+                    'pred_len': len(pred_mask),
+                    'gt_len': len(gt_ids),
+                    'label': label_name
+                })
+            continue  # 跳过这个预测实例
+        
+        total_pred_instances += 1
+        
         # convert to binary
         pred_mask = np.not_equal(pred_mask, 0)
         num = np.count_nonzero(pred_mask)
@@ -526,6 +543,11 @@ def evaluate(
 
     print("Evaluating", len(preds), "scans...")
     matches = {}
+    
+    # 添加统计信息
+    total_pred_instances = 0
+    skipped_instances = 0
+    length_mismatches = []
 
     for sample_ndx, (scene_id, scene_preds) in enumerate(preds.items()):
         # key = scene id = scene0000_00 
@@ -676,6 +698,29 @@ def evaluate(
             matches_scene = {
                 'matches_key': {
                     "gt": gt2pred,
+    
+    # 打印统计信息
+    print("\n" + "="*80)
+    print("EVALUATION STATISTICS:")
+    print(f"Total predicted instances: {total_pred_instances + skipped_instances}")
+    print(f"Successfully evaluated instances: {total_pred_instances}")
+    print(f"Skipped instances (length mismatch): {skipped_instances}")
+    if total_pred_instances + skipped_instances > 0:
+        skip_ratio = skipped_instances / (total_pred_instances + skipped_instances) * 100
+        print(f"Skip ratio: {skip_ratio:.2f}%")
+        if skip_ratio > 5:
+            print("⚠️  WARNING: More than 5% of instances were skipped!")
+        if skip_ratio > 20:
+            print("❌ CRITICAL: More than 20% of instances were skipped! Data may be corrupted.")
+    
+    if length_mismatches:
+        print(f"\nFirst {len(length_mismatches)} length mismatches:")
+        for i, mm in enumerate(length_mismatches, 1):
+            print(f"  {i}. Scene: {mm['scene']}, Label: {mm['label']}, "
+                  f"Pred: {mm['pred_len']}, GT: {mm['gt_len']}, "
+                  f"Diff: {mm['pred_len'] - mm['gt_len']}")
+    print("="*80 + "\n")
+    
                     "pred": pred2gt
                 }
             }

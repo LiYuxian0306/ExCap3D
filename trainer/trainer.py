@@ -1256,6 +1256,18 @@ class InstanceSegmentation(pl.LightningModule):
         original_normals = data.original_normals
         # eg. 131k, 3 = original point coordinates, not normalized!
         original_coordinates = data.original_coordinates
+        
+        # 调试信息：打印数据长度
+        if batch_idx == 0:  # 只在第一个batch打印
+            for bid in range(len(file_names)):
+                print(f"\n{'='*60}")
+                print(f"Scene: {file_names[bid]}")
+                print(f"Voxelized points: {len(data.coordinates) // len(file_names)}")
+                print(f"inverse_map length: {len(inverse_maps[bid])}")
+                print(f"target_full point2segment length: {len(target_full[bid]['point2segment'])}")
+                print(f"original_coordinates length: {len(original_coordinates[bid])}")
+                print(f"Expected lengths should all match (inverse_map, target_full, original_coordinates)")
+                print(f"{'='*60}\n")
 
         # eg. 107k, 3 = coordinates of voxels
         if len(data.coordinates) == 0:
