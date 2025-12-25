@@ -20,12 +20,12 @@ class ScannetppPreprocessing(BasePreprocessing):
     '''
     def __init__(
             self,
-            data_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled',
-            save_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final',
+            data_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/chunked',
+            save_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_npy',
             train_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt',
-            val_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt',
-            labels_path: str = '/home/kylin/datasets/scannetpp/scannetpp/metadata/semantic_benchmark/top100.txt',
-            instance_labels_path: str = "/home/kylin/datasets/scannetpp/scannetpp/metadata/semantic_benchmark/top100_instance.txt",
+            val_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/val_list.txt',
+            labels_path: str = '/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt',
+            instance_labels_path: str = "/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt",
             modes: tuple = ("train", "validation"),
             n_jobs: int = -1,
     ):

@@ -29,7 +29,7 @@ which python
 #/disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python sample_pth.py \
     #n_jobs=1 \
     #sequential=True \
-    #data_dir=/home/kylin/datasets/scannetpp/scannetpp/data/ \
+    #data_dir=/home/kylin/datasets/scannetpp_v2/scannetpp/data/ \
     #input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/#semantic_processed_unchunked/ \
     #list_path=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/all_list.txt \
     #segments_dir=null \
@@ -46,4 +46,4 @@ which python
     --data_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_sampled/ \
     --save_dir=/home/kylin/lyx/project_study/ExCap3D/data/excap3d_final/ \
     --train_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt \
-    --val_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt \
+    --val_list=/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt 

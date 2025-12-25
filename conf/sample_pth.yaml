@@ -3,7 +3,7 @@ data_dir: /cluster/eriador/cyeshwanth/scannetpp_download/data
 input_pth_dir: /cluster/eriador/cyeshwanth/caption3d/pth_data/pth_data_100
 list_path: /cluster/eriador/cyeshwanth/caption3d/spp_meta/split_public/train_new_val.txt
 
-sample_factor: 0.1
+sample_factor: 0.6
 
 segfile_ext: .segs.json
 
