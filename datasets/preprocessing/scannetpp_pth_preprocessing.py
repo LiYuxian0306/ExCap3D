@@ -4,6 +4,7 @@ from fire import Fire
 from natsort import natsorted
 from loguru import logger
 import torch
+import traceback  # 引入 traceback 用于打印详细报错信息
 
 from datasets.preprocessing.base_preprocessing import BasePreprocessing
 
@@ -47,8 +48,14 @@ class ScannetppPreprocessing(BasePreprocessing):
             for scene_id in self.lists[mode]:
                 # path to pth file
                 path = Path(data_dir) / f'{scene_id}.pth'
+                
+                # --- 修改 1: 检查文件是否存在，不存在则报错并跳过 ---
                 if path.is_file():
                     filepaths.append(path)
+                else:
+                    logger.error(f"[Missing File] Scene '{scene_id}' found in {mode} list but file not found at: {path}. Skipping...")
+                # ------------------------------------------------
+                    
             self.files[mode] = natsorted(filepaths)
             print(f'Found {len(self.files[mode])} files for {mode}')
 
@@ -76,87 +83,89 @@ class ScannetppPreprocessing(BasePreprocessing):
             mode: train, test or validation
 
         Returns:
-            filebase: info about file
+            filebase: info about file or None if failed
         """
-        scene = filepath.stem
-        filebase = {
-            "filepath": filepath,
-            "scene": scene,
-            "sub_scene": None,
-            "raw_filepath": str(filepath),
-            "file_len": -1,
-        }
-        
-        pth_data = torch.load(filepath)
-        # read everything from pth file
-        # Support both vtx_* and sampled_* key names for compatibility
-        # Priority: vtx_* > sampled_* (vtx_* is the standard after sample_pth.py processing)
-        def get_key(key_vtx, key_sampled):
-            """Get value using vtx_* key first, fallback to sampled_* key if not found."""
-            if key_vtx in pth_data:
-                return pth_data[key_vtx]
-            elif key_sampled in pth_data:
-                return pth_data[key_sampled]
-            else:
-                raise KeyError(f"Neither '{key_vtx}' nor '{key_sampled}' found in pth file {filepath}")
-        
-        coords = get_key('vtx_coords', 'sampled_coords')
-        colors = get_key('vtx_colors', 'sampled_colors')
-        
-        # --- 修改开始: 处理缺失的法向量 ---
+        # --- 修改 2: 添加 try-except 块包裹整个处理逻辑 ---
         try:
-            normals = get_key('vtx_normals', 'sampled_normals')
-        except KeyError:
-            # 如果找不到法向量，生成一个与 coords 形状相同的全0数组
-            logger.warning(f"Normals not found for {scene}, filling with zeros.") # 可选：打印警告
-            normals = np.zeros_like(coords, dtype=np.float32)
-        # --- 修改结束 ---
+            scene = filepath.stem
+            filebase = {
+                "filepath": filepath,
+                "scene": scene,
+                "sub_scene": None,
+                "raw_filepath": str(filepath),
+                "file_len": -1,
+            }
+            
+            pth_data = torch.load(filepath)
+            # read everything from pth file
+            # Support both vtx_* and sampled_* key names for compatibility
+            def get_key(key_vtx, key_sampled):
+                """Get value using vtx_* key first, fallback to sampled_* key if not found."""
+                if key_vtx in pth_data:
+                    return pth_data[key_vtx]
+                elif key_sampled in pth_data:
+                    return pth_data[key_sampled]
+                else:
+                    raise KeyError(f"Neither '{key_vtx}' nor '{key_sampled}' found in pth file {filepath}")
+            
+            coords = get_key('vtx_coords', 'sampled_coords')
+            colors = get_key('vtx_colors', 'sampled_colors')
+            
+            try:
+                normals = get_key('vtx_normals', 'sampled_normals')
+            except KeyError:
+                logger.warning(f"Normals not found for {scene}, filling with zeros.")
+                normals = np.zeros_like(coords, dtype=np.float32)
 
-        segment_ids = get_key('vtx_segment_ids', 'sampled_segment_ids')
-        semantic_labels = get_key('vtx_labels', 'sampled_labels').astype(np.float32)
-        # keep vtx_instance_anno_id so that it can be used to match with caption data, etc
-        # not instance labels
-        instance_labels = get_key('vtx_instance_anno_id', 'sampled_instance_anno_id').astype(np.float32)
-        
-        file_len = len(coords)
-        # add dummy information
-        filebase["file_len"] = file_len
-        filebase["scene_type"] = 'dummy'
-        filebase["raw_description_filepath"] = 'dummy'
-        filebase["raw_instance_filepath"] = 'dummy'
-        filebase["raw_segmentation_filepath"] = 'dummy'
-        
-        # make segment IDs 0..N
-        unique_segment_ids = np.unique(segment_ids, return_inverse=True)[1].astype(np.float32)
-        # put everything in a single array
-        # add an extra axis to segment IDs, sem labels and instance labels 
-        points = np.hstack((coords, colors.astype(np.float32) * 255, normals, unique_segment_ids[..., None], semantic_labels[..., None], instance_labels[..., None]))
-        # use np.int32 to avoid overflow?
-        gt_data = points[:, -2] * 1000 + points[:, -1] + 1
+            segment_ids = get_key('vtx_segment_ids', 'sampled_segment_ids')
+            semantic_labels = get_key('vtx_labels', 'sampled_labels').astype(np.float32)
+            instance_labels = get_key('vtx_instance_anno_id', 'sampled_instance_anno_id').astype(np.float32)
+            
+            file_len = len(coords)
+            filebase["file_len"] = file_len
+            filebase["scene_type"] = 'dummy'
+            filebase["raw_description_filepath"] = 'dummy'
+            filebase["raw_instance_filepath"] = 'dummy'
+            filebase["raw_segmentation_filepath"] = 'dummy'
+            
+            unique_segment_ids = np.unique(segment_ids, return_inverse=True)[1].astype(np.float32)
+            
+            points = np.hstack((coords, colors.astype(np.float32) * 255, normals, unique_segment_ids[..., None], semantic_labels[..., None], instance_labels[..., None]))
+            
+            gt_data = points[:, -2] * 1000 + points[:, -1] + 1
 
-        processed_filepath = self.save_dir / mode / f"{scene}.npy"
-        if not processed_filepath.parent.exists():
-            processed_filepath.parent.mkdir(parents=True, exist_ok=True)
-        np.save(processed_filepath, points.astype(np.float32))
-        filebase["filepath"] = str(processed_filepath)
+            processed_filepath = self.save_dir / mode / f"{scene}.npy"
+            if not processed_filepath.parent.exists():
+                processed_filepath.parent.mkdir(parents=True, exist_ok=True)
+            np.save(processed_filepath, points.astype(np.float32))
+            filebase["filepath"] = str(processed_filepath)
 
-        processed_gt_filepath = self.save_dir / "instance_gt" / mode / f"{scene}.txt"
-        if not processed_gt_filepath.parent.exists():
-            processed_gt_filepath.parent.mkdir(parents=True, exist_ok=True)
-        np.savetxt(processed_gt_filepath, gt_data.astype(np.int32), fmt="%d")
-        filebase["instance_gt_filepath"] = str(processed_gt_filepath)
+            processed_gt_filepath = self.save_dir / "instance_gt" / mode / f"{scene}.txt"
+            if not processed_gt_filepath.parent.exists():
+                processed_gt_filepath.parent.mkdir(parents=True, exist_ok=True)
+            np.savetxt(processed_gt_filepath, gt_data.astype(np.int32), fmt="%d")
+            filebase["instance_gt_filepath"] = str(processed_gt_filepath)
 
-        filebase["color_mean"] = [
-            float((colors[:, 0] / 255).mean()),
-            float((colors[:, 1] / 255).mean()),
-            float((colors[:, 2] / 255).mean()),
-        ]
-        filebase["color_std"] = [
-            float(((colors[:, 0] / 255) ** 2).mean()),
-            float(((colors[:, 1] / 255) ** 2).mean()),
-            float(((colors[:, 2] / 255) ** 2).mean()),
-        ]
-        return filebase
+            filebase["color_mean"] = [
+                float((colors[:, 0] / 255).mean()),
+                float((colors[:, 1] / 255).mean()),
+                float((colors[:, 2] / 255).mean()),
+            ]
+            filebase["color_std"] = [
+                float(((colors[:, 0] / 255) ** 2).mean()),
+                float(((colors[:, 1] / 255) ** 2).mean()),
+                float(((colors[:, 2] / 255) ** 2).mean()),
+            ]
+            return filebase
+
+        except Exception as e:
+            # --- 修改 3: 捕获异常，打印堆栈，返回 None ---
+            logger.error(f"!!! Error processing file: {filepath} !!!")
+            logger.error(f"Error details: {e}")
+            # 打印完整的错误堆栈，方便定位是哪一行代码出的问题
+            logger.error(traceback.format_exc())
+            return None
+        # ------------------------------------------------
 
     def compute_color_mean_std(
             self, train_database_path: str = "./data/processed/scannet/train_database.yaml"
@@ -164,6 +173,10 @@ class ScannetppPreprocessing(BasePreprocessing):
         train_database = self._load_yaml(train_database_path)
         color_mean, color_std = [], []
         for sample in train_database:
+            # --- 修改 4: 增加对 None 数据的过滤，防止之前处理失败的数据导致这里崩溃 ---
+            if sample is None:
+                continue
+            # -------------------------------------------------------------------
             color_std.append(sample["color_std"])
             color_mean.append(sample["color_mean"])
 
