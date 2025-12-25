@@ -3,13 +3,20 @@ from pathlib import Path
 import torch
 
 def check_scene_validity(npy_path, 
-                         voxel_size=0.02,
-                         filter_out_classes=[0, 1],  # wall, floor - 根据你的配置调整
-                         ignore_class_threshold=100,
-                         segment_overlap_thresh=0.9):
+                         voxel_size=0.02,  # 从 conf/data/indoor.yaml
+                         filter_out_classes=[],  # ScanNet++默认不过滤，根据你的配置调整
+                         ignore_class_threshold=100,  # 从 conf/config_base_instance_segmentation.yaml
+                         segment_overlap_thresh=0.9,
+                         verbose=False):
     """
     完整模拟 VoxelizeCollate 和 get_instance_masks 的处理流程
     检查场景是否会在训练时导致 IndexError
+    
+    参数说明:
+    - voxel_size: 体素大小（米），越小越精细但计算量越大
+    - filter_out_classes: 要过滤的语义类别ID（如墙、地板）
+    - ignore_class_threshold: 小于此点数的实例会被过滤
+    - verbose: 是否输出详细的调试信息
     """
     try:
         data = np.load(npy_path)
@@ -33,6 +40,12 @@ def check_scene_validity(npy_path,
     coords = data[:, :3]
     coords_voxel = np.floor(coords / voxel_size)
     unique_coords, unique_idx = np.unique(coords_voxel, axis=0, return_index=True)
+    
+    if verbose:
+        print(f"\n  体素化统计:")
+        print(f"    原始点数: {len(data)}")
+        print(f"    体素化后: {len(unique_coords)} voxels")
+        print(f"    下采样率: {len(unique_coords)/len(data)*100:.1f}%")
     
     if len(unique_coords) == 0:
         return False, "No voxels after voxelization"
@@ -86,18 +99,23 @@ def check_scene_validity(npy_path,
         # 如果能到这里，说明是一个有效实例
         valid_instances += 1
     
-    if valid_instances == 0:
-        reason_summary = "; ".join(filtered_reasons[:5])  # 只显示前5个原因
-        if len(filtered_reasons) > 5:
-            reason_summary += f" ... ({len(filtered_reasons)-5} more)"
-        return False, f"No valid instances after filtering. Had {len(instance_ids)} raw instances. Reasons: {reason_summary}"
+    if verbose:
+        print(f"  实例过滤统计:")
+        print(f"    原始实例数: {len(instance_ids)}")
+        print(f"    有效实例数: {valid_instances}")
+        print(f"    过滤原因:")
+        for reason in filtered_reasons:
+            print(f"      - {reason}")
     
-    return True, f"Valid: {valid_instances} instances (filtered {len(instance_ids) - valid_instances})"
-
-
-def check_dataset_lists(data_root, list_file, mode_name="validation"):
+    if valid_instances == 0:
+        reason_summary = "; ".join(filtered_reasons[:5])  # 只显示前5个原因, verbose=False, 
+                       voxel_size=0.02, filter_out_classes=[], ignore_class_threshold=100):
     """
     检查数据集列表中的所有场景
+    
+    参数:
+    - verbose: 是否输出每个场景的详细统计信息
+    - voxel_size, filter_out_classes, ignore_class_threshold: 传递给 check_scene_validity
     """
     data_root = Path(data_root)
     list_file = Path(list_file)
@@ -113,6 +131,10 @@ def check_dataset_lists(data_root, list_file, mode_name="validation"):
     print(f"Checking {len(scene_ids)} scenes in {mode_name} set")
     print(f"Data root: {data_root}")
     print(f"List file: {list_file}")
+    print(f"Parameters:")
+    print(f"  voxel_size: {voxel_size}")
+    print(f"  filter_out_classes: {filter_out_classes}")
+    print(f"  ignore_class_threshold: {ignore_class_threshold}")
     print(f"{'='*80}\n")
     
     bad_scenes = []
@@ -128,28 +150,77 @@ def check_dataset_lists(data_root, list_file, mode_name="validation"):
             print(f"❌ {scene_id}: Missing file")
             continue
         
+        if verbose:
+            print(f"\n检查场景: {scene_id}")
+        
+        is_valid, msg = check_scene_validity(
+            npy_path, 
+            voxel_size=voxel_size,
+            filter_out_classes=filter_out_classes,
+            ignore_class_threshold=ignore_class_threshold,
+            verbose=verbose
+        
+        npy_path = data_root / f"{scene_id}.npy"
+        
+        if not npy_path.exists():
+            bad_scenes.append((scene_id, "Missing file"))
+            print(f"❌ {scene_id}: Missing file")
+            continue
+        
         is_valid, msg = check_scene_validity(npy_path)
         
         if not is_valid:
             bad_scenes.append((scene_id, msg))
-            print(f"❌ {scene_id}: {msg}")
+      ========== 配置区 ==========
+    # 服务器路径
+    data_root = Path("/home/kylin/lyx/project_study/ExCap3D/data/processed")
+    code_root = Path("/home/kylin/lyx/project_study/ExCap3D/code/excap3d")
     
-    print(f"\n{'='*80}")
-    print(f"Summary for {mode_name}:")
-    print(f"  Total scenes: {len(scene_ids)}")
-    print(f"  Valid scenes: {len(scene_ids) - len(bad_scenes)}")
-    print(f"  Invalid scenes: {len(bad_scenes)}")
-    print(f"{'='*80}\n")
+    # 训练参数（请确保与训练配置一致！）
+    # 从 conf/data/indoor.yaml
+    VOXEL_SIZE = 0.02  # 2cm
     
-    if bad_scenes:
-        print("Invalid scenes:")
-        for scene_id, reason in bad_scenes:
-            print(f"  - {scene_id}: {reason}")
+    # 从 conf/config_base_instance_segmentation.yaml
+    IGNORE_CLASS_THRESHOLD = 100
     
-    return bad_scenes
-
-
-if __name__ == "__main__":
+    # ScanNet++: 默认不过滤类别（如果你的配置有过滤，请修改这里）
+    # 例如 ScanNet 会过滤 [0, 1] (wall, floor)
+    FILTER_OUT_CLASSES = []
+    
+    # 是否输出详细的调试信息（建议先设为 False 快速扫描，发现问题后设为 True）
+    VERBOSE = False
+    # ===========================
+    
+    train_list = code_root / "train_list.txt"
+    val_list = code_root / "val_list.txt"
+    
+    # 检查 validation set
+    print("\n" + "="*80)
+    print("CHECKING VALIDATION SET")
+    print("="*80)
+    bad_val = check_dataset_lists(
+        data_root / "validation", 
+        val_list, 
+        "validation",
+        verbose=VERBOSE,
+        voxel_size=VOXEL_SIZE,
+        filter_out_classes=FILTER_OUT_CLASSES,
+        ignore_class_threshold=IGNORE_CLASS_THRESHOLD
+    )
+    
+    # 检查 training set
+    print("\n" + "="*80)
+    print("CHECKING TRAINING SET")
+    print("="*80)
+    bad_train = check_dataset_lists(
+        data_root / "train", 
+        train_list, 
+        "train",
+        verbose=VERBOSE,
+        voxel_size=VOXEL_SIZE,
+        filter_out_classes=FILTER_OUT_CLASSES,
+        ignore_class_threshold=IGNORE_CLASS_THRESHOLD
+    
     # 配置路径 - 服务器路径
     data_root = Path("/home/kylin/lyx/project_study/ExCap3D/data/processed")
     code_root = Path("/home/kylin/lyx/project_study/ExCap3D/code/excap3d")

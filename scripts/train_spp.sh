@@ -3,9 +3,9 @@
 #SBATCH --job-name=m3d_spp_instseg     
 #SBATCH --mail-type=END,FAIL          
 #SBATCH --mail-user=chandan.yeshwanth@tum.de 
-#SBATCH --mem=64gb                     
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
+#SBATCH --mem=96gb                     
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=16
 #SBATCH --constraint="rtx_a6000"
 
 #SBATCH --time=4-00:00:00              
@@ -21,6 +21,7 @@ echo "Running on $(hostname)"
 
 /disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python main_instance_segmentation.py \
     general.save_root=/home/kylin/lyx/project_study/ExCap3D/data/excap_checkpoint \
+    general.gpus=4 \
     data.train_dataset.dataset_name=scannetpp \
     data.validation_dataset.dataset_name=scannetpp \
     data.train_dataset.clip_points=1000000 \
@@ -32,9 +33,10 @@ echo "Running on $(hostname)"
     data.semantic_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt \
     data.instance_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt \
     caption_model.class_weights_file=null \
-    data.batch_size=1 \
+    data.batch_size=4 \
     general.max_batch_size=1000000 \
+    trainer.strategy=ddp \
     'general.wandb_group="train instance segmentation"' \
-    'general.notes="train"' \
+    'general.notes="train with 4 GPUs"' \
     
 

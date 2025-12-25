@@ -376,10 +376,25 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
                                             segment_strategy=segment_strategy,
                                             segment_overlap_thresh=segment_overlap_thresh
                                             )
-                for i in range(len(target)):
-                    # add the segment info along with masks
-                    # segment ID for each voxel
-                    target[i]["point2segment"] = input_dict["labels"][i][:, 2]
+                
+                # 容错机制：检查 target 是否为空列表（旧代码的返回值）
+                if isinstance(target, list) and len(target) == 0:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error("get_instance_masks returned empty list, this should not happen after the fix")
+                    # 创建空的 targets
+                    target = [{
+                        'labels': torch.LongTensor([]),
+                        'masks': torch.zeros((0, list_labels[i].shape[0]), dtype=torch.bool),
+                        'segment_mask': torch.zeros((0, input_dict["segment2label"][i].shape[0]), dtype=torch.bool),
+                        'inst_ids': torch.LongTensor([]),
+                        'point2segment': input_dict["labels"][i][:, 2]
+                    } for i in range(len(list_labels))]
+                else:
+                    for i in range(len(target)):
+                        # add the segment info along with masks
+                        # segment ID for each voxel
+                        target[i]["point2segment"] = input_dict["labels"][i][:, 2]
                 if "train" not in mode:
                     # point instance masks, for validation and test
                     target_full = get_instance_masks([torch.from_numpy(l) for l in original_labels],
@@ -519,7 +534,20 @@ def get_instance_masks(list_labels, task, list_segments=None, ignore_class_thres
                 segment_masks.append(segment_mask)
 
         if len(label_ids) == 0:
-            return list()
+            # 容错机制：返回空的 target 字典而不是空列表
+            # 这样可以保持 target 列表的长度与 batch_size 一致，避免 IndexError
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Batch sample {batch_id} has no valid instances after filtering, returning empty target")
+            
+            # 返回一个空的 target，而不是空列表
+            target.append({
+                'labels': torch.LongTensor([]),
+                'masks': torch.zeros((0, list_labels[batch_id].shape[0]), dtype=torch.bool),
+                'segment_mask': torch.zeros((0, list_segments[batch_id].shape[0]), dtype=torch.bool) if list_segments else None,
+                'inst_ids': torch.LongTensor([])
+            })
+            continue  # 继续处理下一个样本
 
         label_ids = torch.stack(label_ids)
         inst_ids = torch.stack(inst_ids)

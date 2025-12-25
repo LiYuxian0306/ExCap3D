@@ -294,6 +294,14 @@ class InstanceSegmentation(pl.LightningModule):
         if len(target) == 0:
             print("no targets")
             return None
+        
+        # 容错机制：检查是否所有 target 都没有有效实例
+        valid_targets = [t for t in target if len(t.get('labels', [])) > 0]
+        if len(valid_targets) == 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Batch {batch_idx}: All samples have no valid instances, skipping")
+            return None
 
         # keep the extra feats separately if they were loaded in the dataset
         if self.config.data.extra_feats_dir: 

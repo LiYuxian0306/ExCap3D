@@ -287,9 +287,20 @@ class Mask3D(nn.Module):
             for i, mask_feature in enumerate(
                 mask_features.decomposed_features
             ):
-                mask_segments.append(
-                    self.scatter_fn(mask_feature, point2segment[i], dim=0)
-                )
+                # 容错机制：检查 point2segment 是否有足够的元素
+                if i >= len(point2segment):
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Sample {i} in batch has no point2segment (likely no valid instances), using fallback")
+                    # 创建一个虚拟的 segment（全部映射到 segment 0）
+                    fallback_p2s = torch.zeros(mask_feature.shape[0], dtype=torch.long, device=mask_feature.device)
+                    mask_segments.append(
+                        self.scatter_fn(mask_feature, fallback_p2s, dim=0)
+                    )
+                else:
+                    mask_segments.append(
+                        self.scatter_fn(mask_feature, point2segment[i], dim=0)
+                    )
 
         sampled_coords = None
 
