@@ -54,8 +54,24 @@ def main(cfg: DictConfig):
 
 # process one scene id
 def process_file(scene_id, cfg):
+    # 从 chunk ID 提取 base scene ID
+    # 格式：02455b3d20_0 → 02455b3d20
+    # 说明：split_pth_data.py 生成的 chunk ID 格式为 {base_scene_id}_{chunk_index}
+    #      需要用 base_scene_id 去 data_root 查找原始网格和分段信息
+    parts = scene_id.split('_')
+    if parts[-1].isdigit():
+        # 去掉最后的数字部分（chunk index）
+        base_scene_id = '_'.join(parts[:-1])
+    else:
+        # 如果没有 chunk 编号，直接用原 ID（兼容非切分数据）
+        base_scene_id = scene_id
+    
+    # 用原始 chunk ID 读取 chunked .pth（例如 02455b3d20_0.pth）
     fname = f'{scene_id}.pth'
-    scene = ScannetppScene_Release(scene_id, data_root=cfg.data_dir)
+    
+    # 用 base scene ID 去 data_root 查找原始网格和分段信息
+    # （segments.json 来自原始场景，不是 chunk）
+    scene = ScannetppScene_Release(base_scene_id, data_root=cfg.data_dir)
 
     # read each pth file
     pth_data = torch.load(Path(cfg.input_pth_dir) / fname)

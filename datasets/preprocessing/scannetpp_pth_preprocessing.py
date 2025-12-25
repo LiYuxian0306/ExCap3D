@@ -20,7 +20,7 @@ class ScannetppPreprocessing(BasePreprocessing):
     '''
     def __init__(
             self,
-            data_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/chunked',
+            data_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/sampled',
             save_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_npy',
             train_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt',
             val_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/val_list.txt',
