@@ -17,7 +17,7 @@ eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
 export OMP_NUM_THREADS=1
 
 # 添加 scannetpp 到 Python 搜索路径（sample_pth.py 需要导入 scannetpp 模块）
-export PYTHONPATH=/home/kylin/lyx/project_study/scannetpp:$PYTHONPATH
+export PYTHONPATH=/home/kylin/lyx/project_study/ExCap3D/code:$PYTHONPATH
 
 set -ex
 
