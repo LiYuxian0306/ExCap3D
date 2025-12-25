@@ -108,7 +108,7 @@ class ScannetppPreprocessing(BasePreprocessing):
             normals = get_key('vtx_normals', 'sampled_normals')
         except KeyError:
             # 如果找不到法向量，生成一个与 coords 形状相同的全0数组
-            # logger.warning(f"Normals not found for {scene}, filling with zeros.") # 可选：打印警告
+            logger.warning(f"Normals not found for {scene}, filling with zeros.") # 可选：打印警告
             normals = np.zeros_like(coords, dtype=np.float32)
         # --- 修改结束 ---
 
