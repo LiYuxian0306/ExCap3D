@@ -698,6 +698,15 @@ def evaluate(
             matches_scene = {
                 'matches_key': {
                     "gt": gt2pred,
+                    "pred": pred2gt
+                }
+            }
+            ap_scores = evaluate_matches(matches_scene)
+            avgs_scene = compute_averages(ap_scores)
+            scene_ap50 = avgs_scene["all_ap_50%"]
+            scene_output_file = Path(output_file).parent / f"{scene_id}-AP50_{scene_ap50}.txt"
+            if not no_output:
+                write_result_file(avgs_scene, scene_output_file)
     
     # 打印统计信息
     print("\n" + "="*80)
@@ -720,17 +729,6 @@ def evaluate(
                   f"Pred: {mm['pred_len']}, GT: {mm['gt_len']}, "
                   f"Diff: {mm['pred_len'] - mm['gt_len']}")
     print("="*80 + "\n")
-    
-                    "pred": pred2gt
-                }
-            }
-            ap_scores = evaluate_matches(matches_scene)
-            avgs_scene = compute_averages(ap_scores)
-            scene_ap50 = avgs_scene["all_ap_50%"]
-            scene_output_file = Path(output_file).parent / f"{scene_id}-AP50_{scene_ap50}.txt"
-            if not no_output:
-                write_result_file(avgs_scene, scene_output_file)
-    print("")
     ap_scores = evaluate_matches(matches)
     avgs = compute_averages(ap_scores)
 

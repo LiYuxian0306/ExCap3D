@@ -2404,7 +2404,7 @@ class InstanceSegmentation(pl.LightningModule):
                             )
                         )
                     else:
-                        assert (False, "class not known!")
+                        assert False, "class not known!"
             else:
                 if not math.isnan(float(ap)):
                     ap_results[
