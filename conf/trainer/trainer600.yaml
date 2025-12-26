@@ -7,3 +7,6 @@ check_val_every_n_epoch: 5
 num_sanity_val_steps: 2
 accelerator: gpu
 precision: bf16
+strategy:
+  _target_: pytorch_lightning.strategies.DDPStrategy
+  find_unused_parameters: true
