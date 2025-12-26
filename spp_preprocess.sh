@@ -14,4 +14,4 @@ python -m datasets.preprocessing.scannetpp_pth_preprocessing preprocess \
     --data_dir=/cluster/eriador/cyeshwanth/caption3d/pth_data_100_0.1_0.005_320 \
     --save_dir=/cluster/eriador/cyeshwanth/caption3d/mask3d/spp_data_0.005_320 \
     --train_list=/cluster/eriador/cyeshwanth/caption3d/spp_meta/split_public/train_25.txt \
-    --val_list=/cluster/eriador/cyeshwanth/caption3d/spp_meta/split_public/train_25.txt \
+    --val_list=/cluster/eriador/cyeshwanth/caption3d/spp_meta/split_public/train_25.txt 

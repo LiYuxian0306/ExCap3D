@@ -27,6 +27,7 @@
 
 # python imports
 import math
+import logging
 from pathlib import Path
 import os, sys, argparse
 import inspect
@@ -337,7 +338,26 @@ def make_pred_info(pred: dict):
     return pred_info
 
 
-def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None):
+def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None, scene_id: str = None, stats: dict = None):
+    """
+    Associate predicted instances with GT, while collecting basic stats.
+
+    Args:
+        pred: dict with pred_masks, pred_classes, pred_scores
+        gt_file: path to GT ids txt (optional if gt_ids is provided)
+        gt_ids: numpy array of GT ids (sem*1000 + inst + 1)
+        scene_id: optional scene identifier for logging
+        stats: optional dict with counters {total_pred_instances, skipped_instances, length_mismatches}
+    """
+    logger = logging.getLogger(__name__)
+    scene_name = scene_id if scene_id is not None else Path(gt_file).stem if gt_file else "unknown"
+    if stats is None:
+        stats = {
+            "total_pred_instances": 0,
+            "skipped_instances": 0,
+            "length_mismatches": [],
+        }
+
     pred_info = make_pred_info(pred)
 
     if gt_ids is None:
@@ -353,9 +373,7 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None):
     for label in gt2pred:
         for gt in gt2pred[label]:
             gt["matched_pred"] = []
-    pred2gt = {}
-    for label in CLASS_LABELS:
-        pred2gt[label] = []
+    pred2gt = {label: [] for label in CLASS_LABELS}
     num_pred_instances = 0
     # mask of void labels in the groundtruth
     bool_void = np.logical_not(np.in1d(gt_ids // 1000, VALID_CLASS_IDS))
@@ -363,44 +381,51 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None):
     for uuid in pred_info:
         label_id = int(pred_info[uuid]["label_id"])
         conf = pred_info[uuid]["conf"]
-        if not label_id in ID_TO_LABEL:
+        if label_id not in ID_TO_LABEL:
             continue
         label_name = ID_TO_LABEL[label_id]
         # read the mask
         pred_mask = pred_info[uuid]["mask"]
-        
+
         # 容错机制：检查 mask 长度是否匹配
         if len(pred_mask) != len(gt_ids):
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Scene {scene_id}: Pred mask length {len(pred_mask)} != GT length {len(gt_ids)}, skipping instance {uuid}")
-            skipped_instances += 1
-            if len(length_mismatches) < 20:  # 只记录前20个
-                length_mismatches.append({
-                    'scene': scene_id,
-                    'pred_len': len(pred_mask),
-                    'gt_len': len(gt_ids),
-                    'label': label_name
-                })
+            logger.warning(
+                "Scene %s: Pred mask length %d != GT length %d, skipping instance %s",
+                scene_name,
+                len(pred_mask),
+                len(gt_ids),
+                uuid,
+            )
+            stats["skipped_instances"] += 1
+            if len(stats["length_mismatches"]) < 20:
+                stats["length_mismatches"].append(
+                    {
+                        "scene": scene_name,
+                        "pred_len": len(pred_mask),
+                        "gt_len": len(gt_ids),
+                        "label": label_name,
+                    }
+                )
             continue  # 跳过这个预测实例
-        
-        total_pred_instances += 1
-        
+
+        stats["total_pred_instances"] += 1
+
         # convert to binary
         pred_mask = np.not_equal(pred_mask, 0)
         num = np.count_nonzero(pred_mask)
         if num < opt["min_region_sizes"][0]:
             continue  # skip if empty
 
-        pred_instance = {}
-        pred_instance["uuid"] = uuid
-        pred_instance["pred_id"] = num_pred_instances
-        pred_instance["label_id"] = label_id
-        pred_instance["vert_count"] = num
-        pred_instance["confidence"] = conf
-        pred_instance["void_intersection"] = np.count_nonzero(
-            np.logical_and(bool_void, pred_mask)
-        )
+        pred_instance = {
+            "uuid": uuid,
+            "pred_id": num_pred_instances,
+            "label_id": label_id,
+            "vert_count": num,
+            "confidence": conf,
+            "void_intersection": np.count_nonzero(
+                np.logical_and(bool_void, pred_mask)
+            ),
+        }
 
         # matched gt instances
         matched_gt = []
@@ -420,7 +445,7 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None):
         num_pred_instances += 1
         pred2gt[label_name].append(pred_instance)
 
-    return gt2pred, pred2gt
+    return gt2pred, pred2gt, stats
 
 
 def print_results(avgs):
@@ -686,7 +711,17 @@ def evaluate(
 
         matches_key = os.path.abspath(gt_file)
         # assign gt to predictions
-        gt2pred, pred2gt = assign_instances_for_scan(scene_preds, gt_file, gt_ids=gt_data)
+        scene_stats = {
+            "total_pred_instances": 0,
+            "skipped_instances": 0,
+            "length_mismatches": [],
+        }
+        gt2pred, pred2gt, scene_stats = assign_instances_for_scan(
+            scene_preds, gt_file, gt_ids=gt_data, scene_id=scene_id, stats=scene_stats
+        )
+        total_pred_instances += scene_stats["total_pred_instances"]
+        skipped_instances += scene_stats["skipped_instances"]
+        length_mismatches.extend(scene_stats["length_mismatches"])
         matches[matches_key] = {}
         matches[matches_key]["gt"] = gt2pred
         matches[matches_key]["pred"] = pred2gt
