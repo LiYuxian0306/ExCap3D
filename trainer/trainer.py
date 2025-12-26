@@ -293,8 +293,9 @@ class InstanceSegmentation(pl.LightningModule):
 
         if len(target) == 0:
             print("no targets")
-            # DDP 同步安全：返回零损失，避免某些卡跳过导致死锁
-            return torch.zeros((), device=self.device, requires_grad=True)
+            # DDP 同步安全：返回与参数挂钩的零损失，触发梯度同步
+            dummy_loss = next(self.parameters()).sum() * 0.0
+            return dummy_loss
         
         # 容错机制：检查是否所有 target 都没有有效实例
         valid_targets = [t for t in target if len(t.get('labels', [])) > 0]
@@ -302,8 +303,9 @@ class InstanceSegmentation(pl.LightningModule):
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Batch {batch_idx}: All samples have no valid instances, returning zero loss for sync")
-            # DDP 同步安全：返回零损失，确保所有 rank 在本 batch 执行 backward/allreduce
-            return torch.zeros((), device=self.device, requires_grad=True)
+            # DDP 同步安全：返回与参数挂钩的零损失，确保所有rank同步
+            dummy_loss = next(self.parameters()).sum() * 0.0
+            return dummy_loss
 
         # keep the extra feats separately if they were loaded in the dataset
         if self.config.data.extra_feats_dir: 
@@ -352,8 +354,9 @@ class InstanceSegmentation(pl.LightningModule):
                     "only a single point gives nans in cross-attention"
                     == run_err.args[0]
                 ):
-                    # 某些极端输入触发 cross-attention NaNs，保持同步返回零损失
-                    return torch.zeros((), device=self.device, requires_grad=True)
+                    # 某些极端输入触发 cross-attention NaNs，保持同步返回与参数挂钩的零损失
+                    dummy_loss = next(self.parameters()).sum() * 0.0
+                    return dummy_loss
                 else:
                     raise run_err
 
@@ -483,8 +486,9 @@ class InstanceSegmentation(pl.LightningModule):
         # all instance seg losses
         # segmentor frozen + caption_loss is None -> cant do backward
         if self.config.general.freeze_segmentor and caption_loss is None and part_caption_loss is None:
-            # segmentor冻结且无caption损失时，返回零损失以保持DDP步调一致
-            return torch.zeros((), device=self.device, requires_grad=True)
+            # segmentor冻结且无caption损失时，返回与参数挂钩的零损失以保持DDP步调一致
+            dummy_loss = next(self.parameters()).sum() * 0.0
+            return dummy_loss
         
         # log at the end after storing everything!
         self.log_dict(logs)
