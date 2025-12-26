@@ -38,7 +38,7 @@ echo "Running on $(hostname)"
     caption_model.class_weights_file=null \
     data.batch_size=1 \
     general.max_batch_size=1200000 \
-    +trainer.strategy=ddp \
+    +trainer.strategy.find_unused_parameters=True \
     'general.wandb_group="train instance segmentation"' \
     'general.notes="train with 4 GPUs - optimized memory"' \
     
