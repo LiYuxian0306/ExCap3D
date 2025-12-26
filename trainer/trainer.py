@@ -1927,6 +1927,14 @@ class InstanceSegmentation(pl.LightningModule):
                     inverse_maps[bid],
                     target_full_res[bid]["point2segment"],
                 )
+                
+                # ===== 断言：fullres_masks_orig 长度必须等于目标点数 =====
+                expected_len = len(target_full_res[bid]["point2segment"])
+                actual_len = fullres_masks_orig.shape[0]
+                assert actual_len == expected_len, (
+                    f"Scene {file_names[bid]}: fullres_masks_orig length {actual_len} != "
+                    f"expected point count {expected_len}. Data may be corrupted or unsync."
+                )
 
                 if backbone_features is not None:
                     # NOTE: batch size needs to be 1 for this to work, during eval??
@@ -2163,6 +2171,14 @@ class InstanceSegmentation(pl.LightningModule):
 
             # store preds/gt for each sample
             if self.config.general.eval_inner_core == -1:
+                # ===== 断言：pred_masks 长度必须与原始点数一致 =====
+                pred_mask_len = all_pred_masks[bid].shape[0]
+                gt_point_len = len(target_full_res[bid]["point2segment"]) if bid < len(target_full_res) else -1
+                assert pred_mask_len == gt_point_len, (
+                    f"Scene {file_names[bid]}: pred_masks length {pred_mask_len} != "
+                    f"GT point count {gt_point_len}. Evaluation will fail."
+                )
+                
                 self.preds[file_names[bid]] = {
                     "pred_masks": all_pred_masks[bid],
                     "pred_scores": all_pred_scores[bid],
