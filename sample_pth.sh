@@ -10,7 +10,6 @@
 #SBATCH --partition=submit  
 
 
-
 eval "$(/disk1/work/kylin/anaconda3/bin/conda shell.bash hook)"
 
 # 虽然 Python 脚本里强制设为了 1，但这里保留也没坏处

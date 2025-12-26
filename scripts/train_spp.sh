@@ -15,7 +15,7 @@
 eval "$(conda shell.bash hook)"
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
-export CUDA_VISIBLE_DEVICES=4,5
+export CUDA_VISIBLE_DEVICES=0,2,4,5
 
 
 # print node name using hostname
@@ -23,7 +23,7 @@ echo "Running on $(hostname)"
 
 /disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python main_instance_segmentation.py \
     general.save_root=/home/kylin/lyx/project_study/ExCap3D/data/excap_checkpoint \
-    general.gpus=2 \
+    general.gpus=4 \
     data.train_dataset.dataset_name=scannetpp \
     data.validation_dataset.dataset_name=scannetpp \
     data.train_dataset.clip_points=1000000 \
@@ -39,6 +39,6 @@ echo "Running on $(hostname)"
     general.max_batch_size=1000000 \
     +trainer.strategy=ddp \
     'general.wandb_group="train instance segmentation"' \
-    'general.notes="train with 2 GPUs"' \
+    'general.notes="train with 4 GPUs"' \
     
 
