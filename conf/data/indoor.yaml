@@ -39,7 +39,7 @@ test_batch_size: 1
 cache_data: false
 
 # collation
-voxel_size: 0.03
+voxel_size: 0.04
 overfit: false
 overfit_n_instances: null
 overfit_instance_ids: null

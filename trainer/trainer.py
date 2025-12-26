@@ -1541,7 +1541,14 @@ class InstanceSegmentation(pl.LightningModule):
         # mask: nvoxel, nqueries
         # inverse_map: npoints, ->nvoxel mapping
         # point2segment_full: npoints, -> nsegments mapping
+        original_size = len(inverse_map)
         mask = mask.detach().cpu()[inverse_map]  # full res, npoint,nquery
+
+        # sanity check after upsampling to points
+        if mask.shape[0] != original_size:
+            raise ValueError(
+                f"Full-res mask length {mask.shape[0]} does not match inverse_map length {original_size}"
+            )
 
         if self.eval_on_segments and is_heatmap == False: #True default
             mask = scatter_mean( # get average logit within each segment
@@ -1551,6 +1558,12 @@ class InstanceSegmentation(pl.LightningModule):
             mask = mask.detach().cpu()[
                 point2segment_full.cpu()
             ]  # go back to full res points
+
+            # sanity check after segment aggregation
+            if mask.shape[0] != original_size:
+                raise ValueError(
+                    f"Aggregated mask length {mask.shape[0]} does not match inverse_map length {original_size}"
+                )
 
         return mask
 

@@ -582,8 +582,15 @@ def evaluate(
 
         # get the GT from the dataset, not from GT file
         if dataset_name in ('scannet', 'scannetpp'):
+            # 使用scene_id精确查找对应的dataset索引，避免按枚举顺序造成错配
+            try:
+                scene_index = dataset.scene_ids.index(scene_id)
+            except ValueError:
+                # 回退：如果scene_id不在列表中，保持原逻辑但记录警告
+                print(f"WARNING: scene_id {scene_id} not found in dataset.scene_ids; falling back to order index {sample_ndx}")
+                scene_index = sample_ndx
             # this way the GT is consistent even if the data was changed after loading
-            gt_data = dataset.__getitem__(sample_ndx, return_gt_data=True)
+            gt_data = dataset.__getitem__(scene_index, return_gt_data=True)
         else:
             gt_data = None
             # gt file should exist
@@ -716,6 +723,12 @@ def evaluate(
             "skipped_instances": 0,
             "length_mismatches": [],
         }
+        # 额外一致性检查：pred与gt长度应相同
+        pred_len = scene_preds["pred_masks"].shape[0]
+        gt_len = len(gt_data) if gt_data is not None else -1
+        if gt_len != -1 and pred_len != gt_len:
+            print(f"❌ Length mismatch before assignment: scene={scene_id}, pred_len={pred_len}, gt_len={gt_len}")
+
         gt2pred, pred2gt, scene_stats = assign_instances_for_scan(
             scene_preds, gt_file, gt_ids=gt_data, scene_id=scene_id, stats=scene_stats
         )

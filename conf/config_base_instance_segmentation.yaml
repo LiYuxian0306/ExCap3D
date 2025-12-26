@@ -106,7 +106,7 @@ general:
   area: 5
   eval_inner_core: -1 # disabled
   # how many predicted masks to keep per scene (why is it called image?)
-  topk_per_image: 100
+  topk_per_image: 50
   ignore_mask_idx: []
   max_batch_size: 2000000  # Maximum number of points per batch (not samples). 
                            # Should be >= clip_points * batch_size

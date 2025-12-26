@@ -16,6 +16,7 @@ from utils.utils import (
 from pytorch_lightning import Trainer, seed_everything
 import random, string
 import pytorch_lightning
+import torch
 
 def read_txt_list(path):
     with open(path) as f: 
@@ -77,6 +78,56 @@ def get_parameters(cfg: DictConfig):
     # getting basic configuration
     if cfg.general.get("gpus", None) is None:
         cfg.general.gpus = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    
+    # ============ GPU信息检测和输出 ============
+    print("\n" + "="*80)
+    print("GPU配置信息:")
+    print("="*80)
+    
+    # 检查CUDA是否可用
+    if torch.cuda.is_available():
+        print(f"✓ CUDA可用 - PyTorch版本: {torch.__version__}")
+        print(f"✓ CUDA版本: {torch.version.cuda}")
+        
+        # 获取环境变量设置的GPU
+        cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "未设置")
+        print(f"✓ CUDA_VISIBLE_DEVICES环境变量: {cuda_visible_devices}")
+        
+        # 获取PyTorch可见的GPU数量和信息
+        num_gpus_available = torch.cuda.device_count()
+        print(f"✓ PyTorch可见的GPU数量: {num_gpus_available}")
+        
+        if num_gpus_available > 0:
+            print(f"\n可用GPU列表:")
+            for i in range(num_gpus_available):
+                gpu_name = torch.cuda.get_device_name(i)
+                gpu_capability = torch.cuda.get_device_capability(i)
+                # 获取GPU内存信息（MB）
+                total_memory = torch.cuda.get_device_properties(i).total_memory / (1024**3)
+                print(f"  [逻辑GPU {i}] {gpu_name}")
+                print(f"    - 计算能力: {gpu_capability[0]}.{gpu_capability[1]}")
+                print(f"    - 总内存: {total_memory:.2f} GB")
+        
+        # 显示配置中要使用的GPU数量
+        print(f"\n配置的GPU数量 (cfg.general.gpus): {cfg.general.gpus}")
+        
+        # 验证配置的GPU数量是否合理
+        if isinstance(cfg.general.gpus, int):
+            if cfg.general.gpus > num_gpus_available:
+                print(f"⚠️  警告: 配置要使用{cfg.general.gpus}块GPU，但只有{num_gpus_available}块GPU可用！")
+                print(f"⚠️  将使用所有可用的{num_gpus_available}块GPU")
+                cfg.general.gpus = num_gpus_available
+            else:
+                print(f"✓ 将使用{cfg.general.gpus}块GPU进行训练")
+        else:
+            print(f"✓ GPU配置: {cfg.general.gpus}")
+    else:
+        print("✗ CUDA不可用 - 将使用CPU训练（不推荐）")
+        cfg.general.gpus = 0
+    
+    print("="*80 + "\n")
+    # ============ GPU信息检测结束 ============
+    
     loggers = []
 
     # create unique id for experiments that are run locally
