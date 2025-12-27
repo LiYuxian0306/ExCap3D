@@ -17,6 +17,8 @@ from pytorch_lightning import Trainer, seed_everything
 import random, string
 import pytorch_lightning
 import torch
+from hydra.utils import instantiate 
+
 
 def read_txt_list(path):
     with open(path) as f: 
@@ -249,14 +251,21 @@ def train(cfg: DictConfig):
         print('Adding callback:', cb_obj)
         callbacks.append(cb_obj)
 
+    #以下是为了解决batch卡死的问题
+    trainer_args = OmegaConf.to_container(cfg.trainer, resolve=True)
+
+    if 'strategy' in trainer_args and isinstance(trainer_args['strategy'], dict) and '_target_' in trainer_args['strategy']:
+        print(f"Instantiating strategy: {trainer_args['strategy']['_target_']}")
+        trainer_args['strategy'] = instantiate(trainer_args['strategy'])
+
     runner = Trainer(
-        enable_checkpointing=not cfg.general.no_ckpt, #是否允许自动存档
-        logger=loggers,  #记录训练数据
-        devices=cfg.general.gpus,  #使用多少gpu
-        callbacks=callbacks, 
+        enable_checkpointing=not cfg.general.no_ckpt,
+        logger=loggers,
+        devices=cfg.general.gpus,
+        callbacks=callbacks,
         # weights_save_path=str(cfg.general.save_dir), # pl 1.7.0
-        default_root_dir=str(cfg.general.save_dir), # pl 1.8.0
-        **cfg.trainer,
+        default_root_dir=str(cfg.general.save_dir), #pl 1.8.0
+        **trainer_args, # <--- 这里使用修改后的字典
     )
     runner.fit(model)  #开始训练
 
