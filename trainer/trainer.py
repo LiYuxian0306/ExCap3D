@@ -298,6 +298,23 @@ class InstanceSegmentation(pl.LightningModule):
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Batch {batch_idx}: All samples have no valid instances, files: {file_names}")
+        
+        # ===== 关键修复：DDP同步空batch状态 =====
+        # 在DDP训练中，必须确保所有GPU知道是否有空batch，避免后续通信不同步
+        if self.trainer.world_size > 1:  # 多GPU训练
+            import torch.distributed as dist
+            # 将local标志广播到所有GPU（0=非空，1=空）
+            local_empty_flag = torch.tensor(int(is_empty_batch), device=self.device)
+            # 使用SUM操作：如果任何一个GPU有空batch，总和>0
+            dist.all_reduce(local_empty_flag, op=dist.ReduceOp.SUM)
+            # 如果所有GPU都是空batch，跳过这个batch
+            if local_empty_flag.item() == self.trainer.world_size:
+                # 所有GPU都是空batch，返回全局dummy loss
+                dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+                for p in self.parameters():
+                    if p.requires_grad:
+                        dummy_loss = dummy_loss + (p * 0).sum()
+                return dummy_loss
 
         # 检查batch size
         if data.features.shape[0] > self.config.general.max_batch_size:
@@ -349,13 +366,16 @@ class InstanceSegmentation(pl.LightningModule):
                     dummy_loss = dummy_loss + (p * 0).sum()
             return dummy_loss
 
-        # 如果是空batch，返回与output关联的zero loss
+        # ===== 修复：即使空batch也要执行criterion保持DDP同步 =====
+        # 如果是空batch，创建fake target让criterion可以正常执行
         if is_empty_batch:
-            dummy_loss = output['pred_logits'].sum() * 0.0 
-            if 'aux_outputs' in output:
-                for aux in output['aux_outputs']:
-                    dummy_loss += aux['pred_logits'].sum() * 0.0
-            return dummy_loss
+            # 创建一个假的target，包含必要的键但没有实际数据
+            fake_target = [{
+                'labels': torch.tensor([], dtype=torch.long, device=self.device),
+                'masks': torch.zeros((0, len(target[bid]['point2segment'])), device=self.device) if len(target) > 0 and bid < len(target) else torch.zeros((0, 0), device=self.device),
+                'point2segment': target[bid]['point2segment'] if len(target) > 0 and bid < len(target) else torch.tensor([], dtype=torch.long)
+            } for bid in range(len(file_names))]
+            target = fake_target
 
         # use the training target, dont run instance seg model; 
         if self.config.general.eval_against_target:
@@ -365,6 +385,7 @@ class InstanceSegmentation(pl.LightningModule):
         # get instance segmentation loss
         try:
             # get the GT-pred assignments from hungarian matching
+            # 即使是空batch也会执行，返回零损失但保持DDP同步
             losses, assignment = self.criterion(output, target, mask_type=self.mask_type)
         except ValueError as val_err:
             print(f"ValueError: {val_err}")
@@ -402,6 +423,15 @@ class InstanceSegmentation(pl.LightningModule):
 
         total_loss = sum(losses.values())       
         ############ instance seg done #################3
+
+        # ===== 对于空batch，在这里提前返回 =====
+        if is_empty_batch:
+            # 确保loss与所有参数连接，避免DDP梯度不同步
+            for p in self.parameters():
+                if p.requires_grad:
+                    total_loss = total_loss + (p * 0).sum()
+            self.log_dict({"train_mean_loss_ce": 0.0, "train_mean_loss_mask": 0.0, "train_mean_loss_dice": 0.0})
+            return total_loss
 
         ############ captioning #################
         caption_loss, part_caption_loss = None, None

@@ -6,6 +6,7 @@ train_dataloader:
   pin_memory: ${data.pin_memory}
   num_workers: ${data.num_workers}
   batch_size: ${data.batch_size}
+  persistent_workers: true  # 防止DDP训练中worker进程hang住
 
 validation_dataloader:
   _target_: torch.utils.data.DataLoader
@@ -13,3 +14,4 @@ validation_dataloader:
   pin_memory: ${data.pin_memory}
   num_workers: ${data.num_workers}
   batch_size: ${data.test_batch_size}
+  persistent_workers: true  # 防止DDP训练中worker进程hang住
