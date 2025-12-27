@@ -920,6 +920,22 @@ class SemanticSegmentationDataset(Dataset):
             # inst ID starts from 1 -> setting inst ID to -1 makes the instance invalid in the GT (after+1 later)
             labels_orig[discard_instance, 1] = -1
 
+        # 检查是否有有效的实例（防止训练时卡顿）
+        # 这是ExCap3D训练卡顿问题的关键修复
+        if labels.ndim >= 2 and labels.shape[1] >= 2:
+            instance_ids = labels[:, 1]
+        else:
+            instance_ids = np.array([])
+        
+        valid_instance_ids = instance_ids[instance_ids != self.ignore_label]
+        
+        if len(valid_instance_ids) == 0:
+            # 样本无有效实例 - 为了避免训练卡顿，重新采样
+            logger.warning(f"Scene {scene_id} (idx {idx}) has no valid instances, resampling...")
+            # 递归调用获取另一个样本，避免返回无效batch
+            new_idx = np.random.randint(0, len(self.data))
+            return self.__getitem__(new_idx, return_gt_data=return_gt_data)
+        
         # empty values for scenes that dont have captions, so that everything can 
         # be properly concatenated later
         cap_data_final = {

@@ -293,12 +293,11 @@ class InstanceSegmentation(pl.LightningModule):
 
         if len(target) == 0:
             print("no targets")
-            # DDP 同步安全：让所有可训练参数参与计算图，触发梯度同步
-            dummy_loss = 0.0
-            for p in self.parameters():
+            # DDP 同步安全：创建与模型参数连接的零损失，确保梯度同步
+            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+            for p in self.model.parameters():
                 if p.requires_grad:
-                    dummy_loss = dummy_loss + p.sum()
-            dummy_loss = dummy_loss * 0.0
+                    dummy_loss = dummy_loss + (p * 0).sum()
             return dummy_loss
         
         # 容错机制：检查是否所有 target 都没有有效实例
@@ -307,12 +306,12 @@ class InstanceSegmentation(pl.LightningModule):
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Batch {batch_idx}: All samples have no valid instances, returning zero loss for sync")
-            # DDP 同步安全：让所有可训练参数参与计算图，确保所有rank同步
-            dummy_loss = 0.0
-            for p in self.parameters():
+            # DDP 同步安全：创建与模型参数连接的零损失，确保所有rank梯度同步
+            # 使用 (p * 0).sum() 而不是 p.sum() * 0 以保持梯度连接
+            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+            for p in self.model.parameters():
                 if p.requires_grad:
-                    dummy_loss = dummy_loss + p.sum()
-            dummy_loss = dummy_loss * 0.0
+                    dummy_loss = dummy_loss + (p * 0).sum()
             return dummy_loss
 
         # keep the extra feats separately if they were loaded in the dataset
@@ -499,11 +498,10 @@ class InstanceSegmentation(pl.LightningModule):
         # segmentor frozen + caption_loss is None -> cant do backward
         if self.config.general.freeze_segmentor and caption_loss is None and part_caption_loss is None:
             # segmentor冻结且无caption损失时，返回与参数挂钩的零损失以保持DDP步调一致
-            dummy_loss = 0.0
-            for p in self.parameters():
+            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+            for p in self.model.parameters():
                 if p.requires_grad:
-                    dummy_loss = dummy_loss + p.sum()
-            dummy_loss = dummy_loss * 0.0
+                    dummy_loss = dummy_loss + (p * 0).sum()
             return dummy_loss
         
         # log at the end after storing everything!
