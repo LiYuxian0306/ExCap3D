@@ -285,91 +285,81 @@ class InstanceSegmentation(pl.LightningModule):
         # target and caption GT is already on GPU here
         data, target, file_names, cap_gt = batch
 
+        # 检查是否为空batch
+        is_empty_batch = False
+        if len(target) == 0:
+            is_empty_batch = True
+        else:
+            valid_targets = [t for t in target if len(t.get('labels', [])) > 0]
+            if len(valid_targets) == 0:
+                is_empty_batch = True
+
+        if is_empty_batch:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Batch {batch_idx}: All samples have no valid instances, files: {file_names}")
+
+        # 检查batch size
         if data.features.shape[0] > self.config.general.max_batch_size:
             print(f"data exceeds threshold: {data.features.shape[0]} points > {self.config.general.max_batch_size} max_batch_size")
             print(f"Batch size (samples): {len(target)}")
             print(f"Files in batch: {file_names}")
             raise RuntimeError("BATCH TOO BIG")
 
-        if len(target) == 0:
-            print("no targets")
-            # DDP 同步安全：创建与模型参数连接的零损失，确保梯度同步
-            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
-            for p in self.model.parameters():
-                if p.requires_grad:
-                    dummy_loss = dummy_loss + (p * 0).sum()
-            return dummy_loss
-        
-        # 容错机制：检查是否所有 target 都没有有效实例
-        valid_targets = [t for t in target if len(t.get('labels', [])) > 0]
-        if len(valid_targets) == 0:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Batch {batch_idx}: All samples have no valid instances, returning zero loss for sync")
-            # DDP 同步安全：创建与模型参数连接的零损失，确保所有rank梯度同步
-            # 使用 (p * 0).sum() 而不是 p.sum() * 0 以保持梯度连接
-            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
-            for p in self.model.parameters():
-                if p.requires_grad:
-                    dummy_loss = dummy_loss + (p * 0).sum()
-            return dummy_loss
-
-        # keep the extra feats separately if they were loaded in the dataset
+        # 处理extra features
         if self.config.data.extra_feats_dir: 
             extra_feats = data.features[:, 6:] 
-            # color, rawcoords
             data.features = data.features[:, :6]
 
         raw_coordinates = None
-        # order: color, normal, rawcoords, extrafeats
-        # default is colors (0-2), rawcoords (3-5) = 3+3=6
-        if self.config.data.add_raw_coordinates: # default true
-            raw_coordinates = data.features[:, 3:6] # gets passed separately
-            data.features = data.features[:, :3] # default: colors
+        if self.config.data.add_raw_coordinates:
+            raw_coordinates = data.features[:, 3:6]
+            data.features = data.features[:, :3]
 
         if self.config.general.use_2d_feats_instseg:
             if self.config.general.project_2d_feats_instseg:
-                # NOTE: need to configure the final dim in data.in_channels
                 extra_feats = self.feat2d_projector(extra_feats.to(self.device)).cpu()
             data.features = torch.cat([data.features, extra_feats], dim=1)
 
-        # goes to device here, was on cpu till now! 准备 MinkowskiEngine 稀疏张量
+        # 创建SparseTensor
         data = ME.SparseTensor(
             coordinates=data.coordinates,
             features=data.features,
             device=self.device,
         )
 
+        # Forward pass
+        try:
+            with torch.set_grad_enabled(not self.config.general.freeze_segmentor):
+                p2s = [t["point2segment"] for t in target] if len(target) > 0 else []
+                
+                output = self.forward(
+                    data,
+                    point2segment=p2s,
+                    raw_coordinates=raw_coordinates,
+                )
+        except RuntimeError as run_err:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Forward error in batch {batch_idx}: {run_err}")
+            # 创建与模型参数连接的dummy loss
+            dummy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+            for p in self.model.parameters():
+                if p.requires_grad:
+                    dummy_loss = dummy_loss + (p * 0).sum()
+            return dummy_loss
+
+        # 如果是空batch，返回与output关联的zero loss
+        if is_empty_batch:
+            dummy_loss = output['pred_logits'].sum() * 0.0 
+            if 'aux_outputs' in output:
+                for aux in output['aux_outputs']:
+                    dummy_loss += aux['pred_logits'].sum() * 0.0
+            return dummy_loss
+
         # use the training target, dont run instance seg model; 
         if self.config.general.eval_against_target:
             output = self.get_output_from_target(target)
-        else:
-            try:
-                with torch.set_grad_enabled(not self.config.general.freeze_segmentor):
-                    output = self.forward(
-                        data,
-                        point2segment=[
-                            target[i]["point2segment"] for i in range(len(target))
-                        ],
-                        raw_coordinates=raw_coordinates,
-                    )
-                # training output: 'pred_logits', 'pred_masks', 'aux_outputs', 'sampled_coords', 'backbone_features', 'final_queries']
-                # queries -> bsize, nqueries, 128
-            except RuntimeError as run_err:
-                print(run_err)
-                if (
-                    "only a single point gives nans in cross-attention"
-                    == run_err.args[0]
-                ):
-                    # 某些极端输入触发 cross-attention NaNs，保持同步返回与参数挂钩的零损失
-                    dummy_loss = 0.0
-                    for p in self.parameters():
-                        if p.requires_grad:
-                            dummy_loss = dummy_loss + p.sum()
-                    dummy_loss = dummy_loss * 0.0
-                    return dummy_loss
-                else:
-                    raise run_err
 
         # TODO: upsample the masks on segments (centers) to each voxel if specified
         # get instance segmentation loss
