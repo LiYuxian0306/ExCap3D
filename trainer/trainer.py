@@ -369,12 +369,27 @@ class InstanceSegmentation(pl.LightningModule):
         # ===== 修复：即使空batch也要执行criterion保持DDP同步 =====
         # 如果是空batch，创建fake target让criterion可以正常执行
         if is_empty_batch:
-            # 创建一个假的target，包含必要的键但没有实际数据
-            fake_target = [{
-                'labels': torch.tensor([], dtype=torch.long, device=self.device),
-                'masks': torch.zeros((0, len(target[bid]['point2segment'])), device=self.device) if len(target) > 0 and bid < len(target) else torch.zeros((0, 0), device=self.device),
-                'point2segment': target[bid]['point2segment'] if len(target) > 0 and bid < len(target) else torch.tensor([], dtype=torch.long)
-            } for bid in range(len(file_names))]
+            # 创建一个假的target，包含所有必要的键但没有实际数据
+            # 根据datasets/utils.py中get_instance_masks的返回格式
+            fake_target = []
+            for bid in range(len(file_names)):
+                # 获取point2segment（如果存在）
+                if len(target) > 0 and bid < len(target) and 'point2segment' in target[bid]:
+                    p2s = target[bid]['point2segment']
+                    num_segments = len(torch.unique(p2s)) if len(p2s) > 0 else 0
+                    num_points = len(p2s)
+                else:
+                    p2s = torch.tensor([], dtype=torch.long, device=self.device)
+                    num_segments = 0
+                    num_points = 0
+                
+                fake_target.append({
+                    'labels': torch.tensor([], dtype=torch.long, device=self.device),
+                    'masks': torch.zeros((0, num_points), dtype=torch.bool, device=self.device),
+                    'segment_mask': torch.zeros((0, num_segments), dtype=torch.bool, device=self.device),
+                    'inst_ids': torch.tensor([], dtype=torch.long, device=self.device),
+                    'point2segment': p2s
+                })
             target = fake_target
 
         # use the training target, dont run instance seg model; 
