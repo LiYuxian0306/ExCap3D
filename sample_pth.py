@@ -156,7 +156,6 @@ def process_file(scene_id, cfg):
                 shape = pth_data[key].shape if hasattr(pth_data[key], 'shape') else len(pth_data[key])
                 logger.info(f"  - {key}: {shape}")
         
-        # ✅ 正确逻辑：
         #    - pth_data['vtx_*'] 的长度 = mesh.vertices 数量
         #    - ndx 指向 mesh.vertices 的索引范围 [0, M)
         #    - 因此 pth_data['vtx_*'][ndx] 是正确的标签传递
