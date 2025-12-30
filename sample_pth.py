@@ -12,8 +12,7 @@ if hasattr(np, 'core'):
     if 'numpy._core' not in sys.modules:
         sys.modules['numpy._core'] = np.core
     
-    # 2. 映射 numpy._core.multiarray -> np.core.multiarray
-    # 这一步是解决 torch.load 报错的关键
+    # 2. 映射 numpy._core.multiarray -> np.core.multiarray(因为版本问题有报错aaa)
     if hasattr(np.core, 'multiarray') and 'numpy._core.multiarray' not in sys.modules:
         sys.modules['numpy._core.multiarray'] = np.core.multiarray
 
@@ -35,9 +34,9 @@ def read_txt_list(path):
 
 @hydra.main(
 config_path="conf", config_name="sample_pth.yaml")
+#当程序启动时，Hydra 会读取sample_pth.yaml，把它转换成 DictConfig 实例传给 cfg这个
 def main(cfg: DictConfig):
-    cfg.scene_ids = read_txt_list(cfg.list_path)
-
+    cfg.scene_ids = read_txt_list(cfg.list_path) #906个
     Path(cfg.output_pth_dir).mkdir(exist_ok=True)
     logger.info(f"Tasks: {len(cfg.scene_ids)}")
 
@@ -46,7 +45,7 @@ def main(cfg: DictConfig):
         for ndx, scene_id in enumerate(cfg.scene_ids):
             print(f'Processing ({ndx}/{len(cfg.scene_ids)}) {scene_id}')
             process_file(scene_id, cfg)
-    else:
+    else: #this is used
         _ = Parallel(n_jobs=cfg.n_jobs, verbose=10)(
             delayed(process_file)(scene_id, cfg)
             for scene_id in cfg.scene_ids
@@ -55,8 +54,8 @@ def main(cfg: DictConfig):
 # process one scene id
 def process_file(scene_id, cfg):
     try:
-        # ============ CHUNK 处理代码（已注释） ============
-        # 如果你使用了 split_pth_data.py 生成 chunk，请取消注释以下代码
+        #============ CHUNK 处理代码开始 ============
+        # 以下被注释掉的代码是用来处理实现 split_pth_data.py 生成 chunk的场景名兼容
         # 从 chunk ID 提取 base scene ID
         # 格式：02455b3d20_0 → 02455b3d20
         # 说明：split_pth_data.py 生成的 chunk ID 格式为 {base_scene_id}_{chunk_index}
@@ -76,7 +75,6 @@ def process_file(scene_id, cfg):
         # 用原始 scene ID 读取 .pth
         fname = f'{scene_id}.pth'
         
-        # 用 scene ID 去 data_root 查找原始网格和分段信息
         scene = ScannetppScene_Release(base_scene_id, data_root=cfg.data_dir)
 
         # read each pth file
@@ -96,6 +94,10 @@ def process_file(scene_id, cfg):
         else:
             # If segments_dir is None, read segments.json directly from scannetpp scene directory
             seg_file = scene.scan_mesh_segs_path
+
+            #@property
+            #def scan_mesh_segs_path(self):
+                #return self.mesh_dir / f'segments.json' 
             
             with open(seg_file, 'r') as f:
                 seg_data = json.load(f)
@@ -107,34 +109,64 @@ def process_file(scene_id, cfg):
         mesh_path = scene.scan_mesh_path
         mesh = o3d.io.read_triangle_mesh(str(mesh_path))
 
-        # sample points, these are the new coordinates
-        pc = mesh.sample_points_uniformly(int(cfg.sample_factor * len(pth_data['sampled_coords'])))	
+        # ========== 重新采样策略 ==========
+        # 根据 pth 中的数据类型决定采样数量
+        # 优先使用 vtx_coords（与 mesh.vertices 对应），其次使用 sampled_coords
+        if 'vtx_coords' in pth_data and len(pth_data['vtx_coords']) > 0:
+            base_point_count = len(pth_data['vtx_coords'])
+        elif 'sampled_coords' in pth_data and len(pth_data['sampled_coords']) > 0:
+            base_point_count = len(pth_data['sampled_coords'])
+        else:
+            raise ValueError(f"场景 {scene_id}: pth 文件中缺少坐标数据")
+        
+        # 在原始 mesh 上重新采样点
+        num_points_to_sample = int(cfg.sample_factor * base_point_count)
+        pc = mesh.sample_points_uniformly(num_points_to_sample)
 
         tree = KDTree(mesh.vertices)
-        # for each sampled point, get the nearest original vertex
+        # 对每个新采样点，找到最近的原始 mesh 顶点
+        # ndx[i] 表示：新采样点 i 的最近顶点是 mesh.vertices[ndx[i]]
         _, ndx = tree.query(np.array(pc.points))
 
-        # sample all properties according to factor except scene_id
+        # sample all properties according to factor except scene_id 
         new_pth_data = {'scene_id': pth_data['scene_id']}
-        # keys to sample data on
-        sample_keys = [key for key in pth_data.keys() if key not in cfg.ignore_keys]
         
-        # mapping from sampled_* keys to vtx_* keys for compatibility with preprocessing
-        key_mapping = {
-            'sampled_coords': 'vtx_coords',
-            'sampled_colors': 'vtx_colors',
-            'sampled_normals': 'vtx_normals',
-            'sampled_labels': 'vtx_labels',
-            'sampled_num_labels': 'vtx_num_labels',
-            'sampled_instance_labels': 'vtx_instance_labels',
-            'sampled_instance_anno_id': 'vtx_instance_anno_id',
-        }
+        # 1. 坐标、颜色：直接从新采样的点云获取（在 mesh 面上的准确值）
+        new_pth_data['vtx_coords'] = np.array(pc.points, dtype=np.float32)
+        new_pth_data['vtx_colors'] = np.array(pc.colors, dtype=np.float32)
         
-        # use sample indices and get properties on sampled points
+        # # 计算法向量（如果需要的话，可以取消注释）
+        # if not mesh.has_vertex_normals():
+        #     mesh.compute_vertex_normals()
+        # # 通过最近邻获取法向量
+        # mesh_normals = np.asarray(mesh.vertex_normals)
+        # new_pth_data['vtx_normals'] = mesh_normals[ndx]
+        
+        # 2. 其他 vtx_* 属性：通过最近邻从 pth 数据获取
+        # 获取所有 vtx_* 开头的键（排除已处理的 coords/colors/normals 和 ignore_keys）
+        sample_keys = [key for key in pth_data.keys() 
+                       if key.startswith('vtx_') 
+                       and key not in ['vtx_coords', 'vtx_colors', 'vtx_normals']
+                       and key not in cfg.ignore_keys]
+        
+        # 打印调试信息：显示 pth 文件中的 vtx_* 变量
+        logger.info(f"场景 {scene_id}: pth 文件中的 vtx_* 变量:")
+        for key in sorted(pth_data.keys()):
+            if key.startswith('vtx_'):
+                shape = pth_data[key].shape if hasattr(pth_data[key], 'shape') else len(pth_data[key])
+                logger.info(f"  - {key}: {shape}")
+        
+        # ✅ 正确逻辑：
+        #    - pth_data['vtx_*'] 的长度 = mesh.vertices 数量
+        #    - ndx 指向 mesh.vertices 的索引范围 [0, M)
+        #    - 因此 pth_data['vtx_*'][ndx] 是正确的标签传递
         for key in sample_keys:
-            # map key name if needed
-            output_key = key_mapping.get(key, key)
-            new_pth_data[output_key] = pth_data[key][ndx]
+            if key in pth_data:
+                new_pth_data[key] = pth_data[key][ndx]
+                logger.debug(f"  处理 {key}: {pth_data[key].shape} -> {new_pth_data[key].shape}")
+            else:
+                logger.warning(f"场景 {scene_id}: pth 文件中缺少 {key}")
+
 
         # handle segment IDs
         if cfg.use_small_mesh_segments:

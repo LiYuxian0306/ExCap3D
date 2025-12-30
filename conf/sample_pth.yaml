@@ -1,7 +1,7 @@
 
-data_dir: /cluster/eriador/cyeshwanth/scannetpp_download/data
-input_pth_dir: /cluster/eriador/cyeshwanth/caption3d/pth_data/pth_data_100
-list_path: /cluster/eriador/cyeshwanth/caption3d/spp_meta/split_public/train_new_val.txt
+data_dir: /home/kylin/datasets/scannetpp_v2/scannetpp/data/
+input_pth_dir: /home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/
+list_path: /home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/process.txt
 
 sample_factor: 0.6
 
