@@ -2,9 +2,6 @@ import json
 from pathlib import Path
 import sys
 
-# 添加 scannetpp 到搜索路径（处理模块导入问题）
-sys.path.insert(0, '/home/kylin/lyx/project_study/ExCap3D/code/scannetpp')
-
 import faulthandler
 faulthandler.enable()
 
