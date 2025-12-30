@@ -33,7 +33,7 @@ def get_parameters(cfg: DictConfig):
     # NOTE
     # num_labels: used in semseg dataset to check if using all or selected labels
     #               and trainer
-    # num_targets: goes to the mask3d model as "num_classes", predict the semantic class of instance (C+1 from paper)
+    # num_targets: goes to the mask3d model as "num_classes", predict the semantic class of instance (C+1 from paper) 
     # filter_out_classes: used in voxelizecollate
     # label_offset: subtracted and clamped in voxelizecollate for scannet. for ours, use mapping, dont subtract
     if cfg.data.get('semantic_classes_file', None) and cfg.data.get('instance_classes_file', None):

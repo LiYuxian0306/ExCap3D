@@ -10,17 +10,17 @@ test_mode: validation # test  # validation
 
 # dataset
 ignore_label: 255
-add_raw_coordinates: true # 3dim
-add_colors: true # 3dim
+add_raw_coordinates: true # 3dim 是否包含原始坐标
+add_colors: true # 3dim 是否包含RGB颜色
 add_normals: false # 3dim
 
 #### NEW: other extra feats on points ####
-extra_feats_dir: 
-extra_feats_dim: 
+extra_feats_dir:    #额外特征的文件夹路径
+extra_feats_dim:    #额外特征的dimension
 ###################################
 
-in_channels: 3 # in_channels = 3 * (add_normals + add_colors + add_raw_coordinates) + extra_feats_dim
-num_labels: 20
+in_channels = 3 * (add_normals + add_colors + add_raw_coordinates) + extra_feats_dim)
+num_labels: 20    #语义类别的数量（ScanNet通常是20类，ScanNet200是200类）；这个就是segmentation任务的输出维度
 # num_labels: 41
 add_instance: ${general.add_instance}
 task: ${general.task}
@@ -29,7 +29,7 @@ data_dir: null
 train_list_file: null
 val_list_file: null
 # if specified, dataset loads captions for each scene, for any objects that have captions
-caption_data_dir: null
+caption_data_dir: null   
 
 # data loader
 pin_memory: false
@@ -38,7 +38,7 @@ batch_size: 1
 test_batch_size: 1
 cache_data: false
 
-# collation
+# collation 体素化
 voxel_size: 0.04
 overfit: false
 overfit_n_instances: null
