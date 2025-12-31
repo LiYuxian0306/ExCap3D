@@ -1,15 +1,15 @@
 
 data_dir: /home/kylin/datasets/scannetpp_v2/scannetpp/data/
-input_pth_dir: /home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/
+input_pth_dir: /home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked
 list_path: /home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/process.txt
 
 sample_factor: 0.6
 
-segfile_ext: .segs.json
+segfile_ext: /scans/segments.json
 
-output_pth_dir: null
+output_pth_dir: /home/kylin/lyx/project_study/ExCap3D/data/sampled/
 # add new segment IDs from this dir
-segments_dir: null
+segments_dir: /home/kylin/datasets/scannetpp_v2/scannetpp/data/
 
 ignore_keys: ['vtx_num_labels', 'scene_id']
 

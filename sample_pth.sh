@@ -30,9 +30,9 @@ which python
     data_dir=/home/kylin/datasets/scannetpp_v2/scannetpp/data/ \
     input_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/semantic_processed/semantic_processed_unchunked/ \
     list_path=/home/kylin/lyx/project_study/ExCap3D/code/scannetpp/semantic/configs/process.txt \
-    segments_dir=null \
+    segments_dir=/home/kylin/datasets/scannetpp_v2/scannetpp/data/ \
     output_pth_dir=/home/kylin/lyx/project_study/ExCap3D/data/sampled/ \
-    sample_factor=0.8 \
+    sample_factor=0.6 \
 
 # ------------------------------------------------------------------
 # 步骤 2: Mask3D 预处理 (Preprocessing)

@@ -25,9 +25,10 @@ class ScannetppPreprocessing(BasePreprocessing):
             save_dir: str = '/home/kylin/lyx/project_study/ExCap3D/data/excap3d_npy',
             train_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/train_list.txt',
             val_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/val_list.txt',
+            test_list: str = '/home/kylin/lyx/project_study/ExCap3D/code/excap3d/test_list.txt',
             labels_path: str = '/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt',
             instance_labels_path: str = "/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt",
-            modes: tuple = ("train", "validation"),
+            modes: tuple = ("train", "validation", "test"),
             n_jobs: int = -1,
     ):
         super().__init__(data_dir, save_dir, modes, n_jobs)
@@ -35,6 +36,7 @@ class ScannetppPreprocessing(BasePreprocessing):
         self.lists = {
             'train': read_txt_list(train_list),
             'validation': read_txt_list(val_list),
+            'test': read_txt_list(test_list),
         }
         
         self.labels = read_txt_list(labels_path)
@@ -69,6 +71,7 @@ class ScannetppPreprocessing(BasePreprocessing):
                 'color': self.palette[label_ndx].tolist(),
                 'name': label,
                 'validation': validation
+            #label database的创建，
             }
             
         self._save_yaml(self.save_dir / "label_database.yaml", labeldb)
@@ -113,12 +116,10 @@ class ScannetppPreprocessing(BasePreprocessing):
             def get_key(key_vtx, key_sampled):
                 """Get value using vtx_* key first, fallback to sampled_* key if not found."""
                 if key_vtx in pth_data:
-                    """
                     logger.debug(f"  使用键: {key_vtx}")
-                    """
                     return pth_data[key_vtx]
                 elif key_sampled in pth_data:
-                    """logger.debug(f"  使用键: {key_sampled} (fallback)")"""
+                    logger.debug(f"  使用键: {key_sampled} (fallback)")
                     return pth_data[key_sampled]
                 else:
                     raise KeyError(f"Neither '{key_vtx}' nor '{key_sampled}' found in pth file {filepath}")

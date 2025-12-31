@@ -135,7 +135,7 @@ def process_file(scene_id, cfg):
         new_pth_data['vtx_coords'] = np.array(pc.points, dtype=np.float32)
         new_pth_data['vtx_colors'] = np.array(pc.colors, dtype=np.float32)
         
-        # 计算法向量（preprocessing 需要，否则会填充全0影响训练）
+        # 计算法向量
         if not mesh.has_vertex_normals():
             mesh.compute_vertex_normals()
         # 通过最近邻获取法向量
@@ -143,10 +143,11 @@ def process_file(scene_id, cfg):
         new_pth_data['vtx_normals'] = mesh_normals[ndx]
         
         # 2. 其他 vtx_* 属性：通过最近邻从 pth 数据获取
-        # 获取所有 vtx_* 开头的键（排除已处理的 coords/colors/normals 和 ignore_keys）
+        # 获取所有 vtx_* 开头的键（排除已处理的 coords/colors/normals/segment_ids 和 ignore_keys）
+        # 注意：vtx_segment_ids 单独处理（第185行），因为它需要从 segments.json 重新读取
         sample_keys = [key for key in pth_data.keys() 
                        if key.startswith('vtx_') 
-                       and key not in ['vtx_coords', 'vtx_colors', 'vtx_normals']
+                       and key not in ['vtx_coords', 'vtx_colors', 'vtx_normals', 'vtx_segment_ids']
                        and key not in cfg.ignore_keys]
         
         # 打印调试信息：显示 pth 文件中的 vtx_* 变量
