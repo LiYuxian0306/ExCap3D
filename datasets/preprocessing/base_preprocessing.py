@@ -17,10 +17,10 @@ from loguru import logger
 class BasePreprocessing:
     def __init__(
         self,
-        data_dir: str = "./data/raw/",
-        save_dir: str = "./data/processed/",
+        data_dir: str = "null",
+        save_dir: str = "null",
         modes: tuple = ("train", "validation", "test"),
-        n_jobs: int = -1,
+        n_jobs: int = -1, #使用所有CPU kernel
     ):
         self.data_dir = Path(data_dir)
         self.save_dir = Path(save_dir)

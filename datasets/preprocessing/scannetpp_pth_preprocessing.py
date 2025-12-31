@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 from fire import Fire
-from natsort import natsorted
+from natsort import natsorted #naturally sorted
 from loguru import logger
 import torch
 import traceback  # 引入 traceback 用于打印详细报错信息
@@ -101,7 +101,7 @@ class ScannetppPreprocessing(BasePreprocessing):
             
             pth_data = torch.load(filepath)
             
-            """# ========== 数据验证和调试信息 ==========
+            # ========== 数据验证和调试信息 ==========
             logger.info(f"处理场景 {scene}:")
             logger.info(f"  pth 文件中的所有键: {sorted(pth_data.keys())}")
             
@@ -109,7 +109,7 @@ class ScannetppPreprocessing(BasePreprocessing):
             for key in sorted(pth_data.keys()):
                 if key.startswith(('vtx_', 'sampled_')):
                     shape = pth_data[key].shape if hasattr(pth_data[key], 'shape') else 'N/A'
-                    logger.info(f"  - {key}: {shape}")"""
+                    logger.info(f"  - {key}: {shape}")
             
             # read everything from pth file
             # Support both vtx_* and sampled_* key names for compatibility
@@ -173,7 +173,8 @@ class ScannetppPreprocessing(BasePreprocessing):
             filebase["raw_instance_filepath"] = 'dummy'
             filebase["raw_segmentation_filepath"] = 'dummy'
             
-            unique_segment_ids = np.unique(segment_ids, return_inverse=True)[1].astype(np.float32)
+            unique_segment_ids = np.unique(segment_ids, 
+            return_inverse=True)[1].astype(np.float32)
             
             points = np.hstack((coords, colors.astype(np.float32) * 255, normals, unique_segment_ids[..., None], semantic_labels[..., None], instance_labels[..., None]))
             
@@ -191,15 +192,16 @@ class ScannetppPreprocessing(BasePreprocessing):
             np.savetxt(processed_gt_filepath, gt_data.astype(np.int32), fmt="%d")
             filebase["instance_gt_filepath"] = str(processed_gt_filepath)
 
+            # colors 从 .pth 读取时已经是 [0, 1] 范围，直接计算均值
             filebase["color_mean"] = [
-                float((colors[:, 0] / 255).mean()),
-                float((colors[:, 1] / 255).mean()),
-                float((colors[:, 2] / 255).mean()),
+                float(colors[:, 0].mean()),
+                float(colors[:, 1].mean()),
+                float(colors[:, 2].mean()),
             ]
             filebase["color_std"] = [
-                float(((colors[:, 0] / 255) ** 2).mean()),
-                float(((colors[:, 1] / 255) ** 2).mean()),
-                float(((colors[:, 2] / 255) ** 2).mean()),
+                float((colors[:, 0] ** 2).mean()),
+                float((colors[:, 1] ** 2).mean()),
+                float((colors[:, 2] ** 2).mean()),
             ]
             return filebase
 
