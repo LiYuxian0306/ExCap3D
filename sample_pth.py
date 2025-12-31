@@ -131,16 +131,16 @@ def process_file(scene_id, cfg):
         # sample all properties according to factor except scene_id 
         new_pth_data = {'scene_id': pth_data['scene_id']}
         
-        # 1. 坐标、颜色：直接从新采样的点云获取（在 mesh 面上的准确值）
+        # 1. 坐标、颜色、法向量：直接从新采样的点云获取（在 mesh 面上的准确值）
         new_pth_data['vtx_coords'] = np.array(pc.points, dtype=np.float32)
         new_pth_data['vtx_colors'] = np.array(pc.colors, dtype=np.float32)
         
-        # # 计算法向量（如果需要的话，可以取消注释）
-        # if not mesh.has_vertex_normals():
-        #     mesh.compute_vertex_normals()
-        # # 通过最近邻获取法向量
-        # mesh_normals = np.asarray(mesh.vertex_normals)
-        # new_pth_data['vtx_normals'] = mesh_normals[ndx]
+        # 计算法向量（preprocessing 需要，否则会填充全0影响训练）
+        if not mesh.has_vertex_normals():
+            mesh.compute_vertex_normals()
+        # 通过最近邻获取法向量
+        mesh_normals = np.asarray(mesh.vertex_normals)
+        new_pth_data['vtx_normals'] = mesh_normals[ndx]
         
         # 2. 其他 vtx_* 属性：通过最近邻从 pth 数据获取
         # 获取所有 vtx_* 开头的键（排除已处理的 coords/colors/normals 和 ignore_keys）

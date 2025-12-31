@@ -97,13 +97,28 @@ class ScannetppPreprocessing(BasePreprocessing):
             }
             
             pth_data = torch.load(filepath)
+            
+            """# ========== 数据验证和调试信息 ==========
+            logger.info(f"处理场景 {scene}:")
+            logger.info(f"  pth 文件中的所有键: {sorted(pth_data.keys())}")
+            
+            # 打印所有 vtx_* 和 sampled_* 键的形状
+            for key in sorted(pth_data.keys()):
+                if key.startswith(('vtx_', 'sampled_')):
+                    shape = pth_data[key].shape if hasattr(pth_data[key], 'shape') else 'N/A'
+                    logger.info(f"  - {key}: {shape}")"""
+            
             # read everything from pth file
             # Support both vtx_* and sampled_* key names for compatibility
             def get_key(key_vtx, key_sampled):
                 """Get value using vtx_* key first, fallback to sampled_* key if not found."""
                 if key_vtx in pth_data:
+                    """
+                    logger.debug(f"  使用键: {key_vtx}")
+                    """
                     return pth_data[key_vtx]
                 elif key_sampled in pth_data:
+                    """logger.debug(f"  使用键: {key_sampled} (fallback)")"""
                     return pth_data[key_sampled]
                 else:
                     raise KeyError(f"Neither '{key_vtx}' nor '{key_sampled}' found in pth file {filepath}")
@@ -114,12 +129,41 @@ class ScannetppPreprocessing(BasePreprocessing):
             try:
                 normals = get_key('vtx_normals', 'sampled_normals')
             except KeyError:
-                logger.warning(f"Normals not found for {scene}, filling with zeros.")
+                logger.warning(f"⚠️ 场景 {scene}: 未找到法向量，填充为零向量")
+                logger.warning(f"  这可能影响模型训练效果，建议在 sample_pth.py 中生成 vtx_normals")
                 normals = np.zeros_like(coords, dtype=np.float32)
 
             segment_ids = get_key('vtx_segment_ids', 'sampled_segment_ids')
             semantic_labels = get_key('vtx_labels', 'sampled_labels').astype(np.float32)
             instance_labels = get_key('vtx_instance_anno_id', 'sampled_instance_anno_id').astype(np.float32)
+            
+            # ========== 数据维度验证 ==========
+            expected_len = len(coords)
+            logger.info(f"  数据点数: {expected_len}")
+            
+            # 验证所有数据的长度一致
+            data_dict = {
+                'coords': coords,
+                'colors': colors,
+                'normals': normals,
+                'segment_ids': segment_ids,
+                'semantic_labels': semantic_labels,
+                'instance_labels': instance_labels
+            }
+            
+            for name, data in data_dict.items():
+                if len(data) != expected_len:
+                    raise ValueError(f"❌ {name} 长度不一致: {len(data)} != {expected_len}")
+                    
+            # 验证维度
+            if coords.shape != (expected_len, 3):
+                raise ValueError(f"❌ coords 维度错误: {coords.shape}, 期望 ({expected_len}, 3)")
+            if colors.shape != (expected_len, 3):
+                raise ValueError(f"❌ colors 维度错误: {colors.shape}, 期望 ({expected_len}, 3)")
+            if normals.shape != (expected_len, 3):
+                raise ValueError(f"❌ normals 维度错误: {normals.shape}, 期望 ({expected_len}, 3)")
+                
+            logger.info(f"  ✅ 数据维度验证通过")
             
             file_len = len(coords)
             filebase["file_len"] = file_len
