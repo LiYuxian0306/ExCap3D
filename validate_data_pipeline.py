@@ -16,6 +16,15 @@ import torch
 from pathlib import Path
 import sys
 
+if hasattr(np, 'core'):
+    # 1. 映射 numpy._core -> np.core
+    if 'numpy._core' not in sys.modules:
+        sys.modules['numpy._core'] = np.core
+    
+    # 2. 映射 numpy._core.multiarray -> np.core.multiarray(因为版本问题有报错aaa)
+    if hasattr(np.core, 'multiarray') and 'numpy._core.multiarray' not in sys.modules:
+        sys.modules['numpy._core.multiarray'] = np.core.multiarray
+
 
 def print_separator(title):
     """打印分隔线"""
