@@ -142,31 +142,56 @@ def process_file(scene_id, cfg):
         mesh_normals = np.asarray(mesh.vertex_normals)
         new_pth_data['vtx_normals'] = mesh_normals[ndx]
         
-        # 2. 其他 vtx_* 属性：通过最近邻从 pth 数据获取
-        # 获取所有 vtx_* 开头的键（排除已处理的 coords/colors/normals/segment_ids 和 ignore_keys）
-        # 注意：vtx_segment_ids 单独处理（第185行），因为它需要从 segments.json 重新读取
-        sample_keys = [key for key in pth_data.keys() 
-                       if key.startswith('vtx_') 
-                       and key not in ['vtx_coords', 'vtx_colors', 'vtx_normals', 'vtx_segment_ids']
-                       and key not in cfg.ignore_keys]
+        # ========== 2. 统一处理标签数据（vtx_* 或 sampled_*）==========
+        # 策略：优先使用 vtx_*，如果没有则使用 sampled_*，两者都没有则报错
         
-        # 打印调试信息：显示 pth 文件中的 vtx_* 变量
-        logger.info(f"场景 {scene_id}: pth 文件中的 vtx_* 变量:")
+        # 确定数据源类型和映射索引
+        if 'vtx_coords' in pth_data:
+            # 情况1: 输入是 vtx_* 数据（来自原始 mesh 顶点）
+            data_prefix = 'vtx_'
+            label_ndx = ndx  # 使用 mesh 顶点映射索引
+            logger.info(f"场景 {scene_id}: 检测到 vtx_* 数据，使用 mesh 顶点映射")
+            
+        elif 'sampled_coords' in pth_data:
+            # 情况2: 输入是 sampled_* 数据（来自 prepare_training_data.py）
+            data_prefix = 'sampled_'
+            # 在原始 sampled_coords 上建立 KDTree 映射
+            sampled_tree = KDTree(pth_data['sampled_coords'])
+            _, label_ndx = sampled_tree.query(np.array(pc.points))
+            logger.info(f"场景 {scene_id}: 检测到 sampled_* 数据，使用 KDTree 映射")
+            
+        else:
+            # 情况3: 两者都没有，报错
+            raise ValueError(f"场景 {scene_id}: pth 文件中既没有 vtx_coords 也没有 sampled_coords，无法处理标签数据")
+        
+        # 打印调试信息：显示 pth 文件中的标签变量
+        logger.info(f"场景 {scene_id}: pth 文件中的 {data_prefix}* 变量:")
         for key in sorted(pth_data.keys()):
-            if key.startswith('vtx_'):
+            if key.startswith(data_prefix):
                 shape = pth_data[key].shape if hasattr(pth_data[key], 'shape') else len(pth_data[key])
                 logger.info(f"  - {key}: {shape}")
         
-        #    - pth_data['vtx_*'] 的长度 = mesh.vertices 数量
-        #    - ndx 指向 mesh.vertices 的索引范围 [0, M)
-        #    - 因此 pth_data['vtx_*'][ndx] 是正确的标签传递
-        for key in sample_keys:
+        # 获取所有标签键（排除已处理的 coords/colors 和 segment_ids，以及 ignore_keys）
+        # 注意：segment_ids 单独处理（从 segments.json 读取）
+        exclude_keys = [f'{data_prefix}coords', f'{data_prefix}colors', 
+                       'vtx_segment_ids', 'vtx_normals']  # vtx_normals 已在上面处理
+        
+        label_keys = [key for key in pth_data.keys() 
+                     if key.startswith(data_prefix) 
+                     and key not in exclude_keys
+                     and key not in cfg.ignore_keys]
+        
+        # 统一传递标签数据（通过 label_ndx 映射）
+        for key in label_keys:
             if key in pth_data:
-                new_pth_data[key] = pth_data[key][ndx]
-                logger.debug(f"  处理 {key}: {pth_data[key].shape} -> {new_pth_data[key].shape}")
+                # 输出键名：统一转换为 vtx_* 格式
+                output_key = key.replace(data_prefix, 'vtx_')
+                new_pth_data[output_key] = pth_data[key][label_ndx]
+                logger.info(f"  映射 {key} -> {output_key}: {pth_data[key].shape} -> {new_pth_data[output_key].shape}")
             else:
                 logger.warning(f"场景 {scene_id}: pth 文件中缺少 {key}")
-
+        
+        logger.info(f"场景 {scene_id}: 标签数据映射完成，共处理 {len(label_keys)} 个字段")
 
         # handle segment IDs
         if cfg.use_small_mesh_segments:
