@@ -70,7 +70,7 @@ class ScannetppPreprocessing(BasePreprocessing):
             labeldb[label_ndx] = {
                 'color': self.palette[label_ndx].tolist(),
                 'name': label,
-                'validation': validation
+                'validation': validation #是否在top100_instance.txt 里面
             #label database的创建，
             }
             
@@ -176,8 +176,10 @@ class ScannetppPreprocessing(BasePreprocessing):
             unique_segment_ids = np.unique(segment_ids, 
             return_inverse=True)[1].astype(np.float32)
             
+            #特征矩阵的产生！
             points = np.hstack((coords, colors.astype(np.float32) * 255, normals, unique_segment_ids[..., None], semantic_labels[..., None], instance_labels[..., None]))
             
+            #ground truth的产生: semantic_id × 1000 + instance_id + 1
             gt_data = points[:, -2] * 1000 + points[:, -1] + 1
 
             processed_filepath = self.save_dir / mode / f"{scene}.npy"
