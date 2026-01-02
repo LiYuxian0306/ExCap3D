@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #SBATCH --job-name=m3d_spp_instseg     
-#SBATCH --mail-type=END,FAIL          
-#SBATCH --mail-user=chandan.yeshwanth@tum.de 
-#SBATCH --mem=64gb                     
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=8
-#SBATCH --constraint="rtx_a6000"
+#SBATCH --mail-type=BEGIN,END,FAIL          
+#SBATCH --mail-user=u3629246@connect.hku.hk
+#SBATCH --mem=128gb                      
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=16
+#SBATCH --constraint="rtx_3090"
 
 #SBATCH --time=4-00:00:00              
 #SBATCH --output=/rhome/cyeshwanth/output/m3d_spp_instseg_%j.log

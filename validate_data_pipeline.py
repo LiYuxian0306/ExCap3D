@@ -343,6 +343,8 @@ def main():
                         help='scannetpp_pth_preprocessing.py 输出目录')
     
     args = parser.parse_args()
+
+    args.scene_id = args.scene_id.strip()
     
     print(f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗

@@ -57,8 +57,8 @@ crop_min_size: 20000
 crop_length: 6.0
 cropping_v1: true
 
-semantic_classes_file: null
-instance_classes_file: null
+semantic_classes_file: /home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt
+instance_classes_file: /home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt
 
 # scannet - use the otherprop and otherstructure classes for training and evaluation
 scannet_use_others_class: false
