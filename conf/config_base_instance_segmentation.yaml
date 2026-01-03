@@ -148,7 +148,7 @@ general:
 defaults:
   - data: indoor
   - data/data_loaders: simple_loader
-  - data/datasets: scannet
+  - data/datasets: scannetpp_simple
   - data/collation_functions: voxelize_collate
   - model: mask3d
   - caption_model: mask3d_captioner

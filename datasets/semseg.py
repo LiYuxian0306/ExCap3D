@@ -41,12 +41,12 @@ class SemanticSegmentationDataset(Dataset):
 
     def __init__(
         self,
-        dataset_name="scannet",
-        data_dir: Optional[Union[str, Tuple[str]]] = "data/processed/scannet",
+        dataset_name="scannetpp",
+        data_dir: Optional[Union[str, Tuple[str]]] = "data/processed",
         # mean std values from scannet
         color_mean_std: Optional[Union[str, Tuple[Tuple[float]]]] = (
-            (0.47793125906962, 0.4303257521323044, 0.3749598901421883),
-            (0.2834475483823543, 0.27566157565723015, 0.27018971370874995),
+            (0.5535638462496167, 0.530705174780984, 0.4837494467278473),
+            (0.1879868453453905, 0.18832387798689498, 0.2107597260012084),
         ),
         mode: Optional[str] = "train",
         add_colors: Optional[bool] = True,
@@ -432,6 +432,10 @@ class SemanticSegmentationDataset(Dataset):
             self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
 
         self.cache_data = cache_data
+        
+        # === 数据完整性检查关卡 ===
+        self._check_data_integrity()
+        
         # new_data = []
         if self.cache_data:
             new_data = []
@@ -502,6 +506,43 @@ class SemanticSegmentationDataset(Dataset):
                 # new_data.append(np.load(self.data[i]["filepath"].replace("../../", "")))
             # self._data = new_data
 
+
+    def _check_data_integrity(self):
+        """检查数据文件是否真实存在及样本完整性"""
+        print("\n" + "="*60)
+        print("【数据完整性检查】")
+        print("="*60)
+        # 1. 检查样本总数和模式
+        print(f"✓ 总样本数: {len(self._data)}")
+        print(f"✓ 模式: {self.mode} | 缓存: {self.cache_data}")
+        if len(self._data) == 0:
+            logger.warning("⚠️  WARNING: 样本列表为空！请检查 list_file 和场景过滤")
+            return
+        # 2. 采样检查前3个样本的文件存在性
+        check_count = min(3, len(self._data))
+        missing_files = []
+        for i in range(check_count):
+            item = self._data[i]
+            filepath = item["filepath"].replace("../../", "")
+            inst_filepath = item["instance_gt_filepath"].replace("../../", "") if item["instance_gt_filepath"] else None
+            
+            if not Path(filepath).exists():
+                missing_files.append((i, "npy", filepath))
+            if inst_filepath and not Path(inst_filepath).exists():
+                missing_files.append((i, "instance", inst_filepath))
+        if missing_files:
+            print(f"\n❌ 发现缺失文件 ({len(missing_files)} 个):")
+            for idx, ftype, fpath in missing_files[:5]:  # 只打印前5个
+                print(f"   样本{idx} [{ftype}]: {fpath}")
+            print("   → 可能导致运行时加载失败！")
+        else:
+            print(f"✓ 前 {check_count} 个样本文件检查通过")
+        # 3. 检查 cache_data 和文件存在的不一致
+        if not self.cache_data and missing_files:
+            print("⚠️  WARNING: cache_data=False 且存在缺失文件，运行时会崩溃！")
+        elif self.cache_data and not missing_files:
+            print("✓ cache_data=True，已验证核心文件存在，初始化时会完整加载")
+        print("="*60 + "\n")
 
     def get_clipped_caption(self, caption):
         caption_tokens = self.tokenizer.encode(caption, max_length=self.max_caption_length-1)

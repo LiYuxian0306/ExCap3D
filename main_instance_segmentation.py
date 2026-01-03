@@ -46,13 +46,13 @@ def get_parameters(cfg: DictConfig):
 
         # ignore_sem_classes = [i for i, c in enumerate(semantic_classes) if c not in instance_classes]
         # sem classes to ignore for instances AFTER MAPPING (not in the original labels)
-        # ours: when mapping to only instance classes, dont filter out anything 现在在这里不filter out classes了？之前的scannetpp操作里filter过一次了吗？
+        # ours: when mapping to only instance classes, dont filter out anything 
         ignore_sem_classes = []
         # print('****** filter_out_classes:', ignore_sem_classes)
 
         # set filter_out_classes, label_offset, indoor/num_labels, general.num_targets
         # for train and val
-        cfg.data.train_dataset.filter_out_classes = ignore_sem_classes  #在下方指定路径的config_base_instance_segmentation.yaml文件里面，有提到
+        cfg.data.train_dataset.filter_out_classes = ignore_sem_classes  
         cfg.data.validation_dataset.filter_out_classes = ignore_sem_classes
         
         num_targets = len(instance_classes) + 1
@@ -164,6 +164,7 @@ def get_parameters(cfg: DictConfig):
             cfg.general.experiment_name += f"_{cfg.general.experiment_name_suffix}"
         print('Created new experiment name:', cfg.general.experiment_name)
 
+    #overfit:用小样本来验证loss是否下降
     if cfg.data.overfit:
         print('Train overfit:', cfg.data.train_dataset.overfit)
         print('Validation overfit:', cfg.data.validation_dataset.overfit)
@@ -173,6 +174,7 @@ def get_parameters(cfg: DictConfig):
     if not os.path.exists(cfg.general.save_dir) and not cfg.general.no_output: # no output -> dont create dir, purely debugging!
         os.makedirs(cfg.general.save_dir)
 
+    #resume:断点续训
     if cfg.general.get('resume', False):
         print('Resuming from last epoch checkpoint for run:', cfg.general.experiment_name)
         cfg['trainer']['resume_from_checkpoint'] = cfg.general.checkpoint
@@ -251,7 +253,7 @@ def train(cfg: DictConfig):
         print('Adding callback:', cb_obj)
         callbacks.append(cb_obj)
 
-    #以下是为了解决batch卡死的问题
+
     trainer_args = OmegaConf.to_container(cfg.trainer, resolve=True)
 
     if 'strategy' in trainer_args and isinstance(trainer_args['strategy'], dict) and '_target_' in trainer_args['strategy']:
