@@ -448,7 +448,7 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
             cap_gt_batch
         )
 
-
+#对每个场景进行实例提取和mask生成
 def get_instance_masks(list_labels, task, list_segments=None, ignore_class_threshold=100,
                        filter_out_classes=[], label_offset=0, num_classes=None, segment_overlap_thresh=None,
                        segment_strategy=None):
@@ -611,7 +611,7 @@ def get_instance_masks(list_labels, task, list_segments=None, ignore_class_thres
                 })
     return target
 
-
+#把pc场景切成四部分
 def make_crops(batch):
     new_batch = []
     # detupling

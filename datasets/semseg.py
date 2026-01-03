@@ -5,7 +5,7 @@ from random import random, sample, uniform
 from typing import Optional, Tuple, Union
 from random import choice
 from copy import deepcopy
-from transformers import GPT2Tokenizer, T5Tokenizer
+from transformers import GPT2Tokenizer, T5Tokenizer  #
 
 from scannetpp.common.file_io import load_json
 import torch
@@ -544,6 +544,7 @@ class SemanticSegmentationDataset(Dataset):
             print("✓ cache_data=True，已验证核心文件存在，初始化时会完整加载")
         print("="*60 + "\n")
 
+    #把caption clip保留一定长度
     def get_clipped_caption(self, caption):
         caption_tokens = self.tokenizer.encode(caption, max_length=self.max_caption_length-1)
         keep_num_tokens = min(len(caption_tokens), self.max_caption_length)
@@ -566,7 +567,8 @@ class SemanticSegmentationDataset(Dataset):
         )
         return clipped_captions
 
-    def splitPointCloud(self, cloud, size=50.0, stride=50, inner_core=-1):
+    #把大场景切成小的blocks
+    def splitPointCloud(self, cloud, size=25.0, stride=25, inner_core=-1):
         if inner_core == -1:
             limitMax = np.amax(cloud[:, 0:3], axis=0)
             width = int(np.ceil((limitMax[0] - size) / stride)) + 1
@@ -579,6 +581,7 @@ class SemanticSegmentationDataset(Dataset):
             blocks = []
             for (x, y) in cells:
                 xcond = (cloud[:, 0] <= x + size) & (cloud[:, 0] >= x)
+                #这里得到的是boolean mask
                 ycond = (cloud[:, 1] <= y + size) & (cloud[:, 1] >= y)
                 cond = xcond & ycond
                 block = cloud[cond, :]
@@ -621,10 +624,8 @@ class SemanticSegmentationDataset(Dataset):
 
     def map2color(self, labels):
         output_colors = list()
-
         for label in labels:
             output_colors.append(self.color_map[label])
-
         return torch.tensor(output_colors)
 
     def __len__(self):
@@ -888,6 +889,7 @@ class SemanticSegmentationDataset(Dataset):
         # keep the orig sem+inst labels
         labels_orig = labels.copy()
 
+        #标签处理与清洗
         if labels.size > 0:
             labels[:, 0] = self._remap_from_zero(labels[:, 0])
             # make instance invalid wherever sem is invalid
@@ -901,6 +903,8 @@ class SemanticSegmentationDataset(Dataset):
                 # taking only first column, which is segmentation label, not instance
                 labels = labels[:, 0].flatten()[..., None]
 
+
+        #feature concatenate
         labels = np.hstack((labels, segments[..., None].astype(np.int32)))
 
         features = color # default feature is color
@@ -980,7 +984,7 @@ class SemanticSegmentationDataset(Dataset):
         # empty values for scenes that dont have captions, so that everything can 
         # be properly concatenated later
         cap_data_final = {
-            'cap_gt_corpus': [],
+            'cap_gt_corpus': [], #该物体对应的所有可用的人类标注描述列表
             'cap_obj_ids': [],
             'cap_sem_ids': [],
             'cap_gt_tokens': np.empty((0, self.max_caption_length), dtype=np.int64),
@@ -1221,6 +1225,7 @@ class SemanticSegmentationDataset(Dataset):
                 {number_of_validation_labels}, {number_of_all_labels}"""
                 raise ValueError(msg)
 
+    #把可能不连续的原始标签映射成连续的
     def _remap_from_zero(self, labels):
         # labels not in label_info are set to ignore_label
         # label info = all the possible labels (including the ones we dont train on)
