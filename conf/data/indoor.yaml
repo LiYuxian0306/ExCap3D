@@ -1,12 +1,12 @@
 # @package _group_
-
+#数据处理
 # these parameters are inherited by datasets, data_loaders and collators
 # but they might be overwritten
 
 # splits
 train_mode: train
 validation_mode: validation
-test_mode: validation # test  # validation
+test_mode: test # test  # validation
 
 # dataset
 ignore_label: 255
@@ -20,7 +20,14 @@ extra_feats_dim:    #额外特征的dimension
 ###################################
 
 in_channels = 3 * (add_normals + add_colors + add_raw_coordinates) + extra_feats_dim)
-num_labels: 20    #语义类别的数量（ScanNet通常是20类，ScanNet200是200类）；这个就是segmentation任务的输出维度
+# num_labels: 语义类别数量
+#   - ScanNet (scannet.yaml): 20类
+#   - ScanNet200 (scannet200.yaml): 200类
+#   - ScanNetPP (scannetpp_simple.yaml): 由 semantic_classes_file 定义（通常 ~100）
+#   
+# 【重要】对于 ScanNetPP，此值会在 main_instance_segmentation.py 中被动态覆盖
+# 若未提供 semantic_classes_file，则使用此默认值
+num_labels: 100  # ScanNetPP 的默认值（替代 20，更接近实际）
 # num_labels: 41
 add_instance: ${general.add_instance}
 task: ${general.task}

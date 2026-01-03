@@ -37,18 +37,19 @@ def get_parameters(cfg: DictConfig):
     # filter_out_classes: used in voxelizecollate
     # label_offset: subtracted and clamped in voxelizecollate for scannet. for ours, use mapping, dont subtract
     if cfg.data.get('semantic_classes_file', None) and cfg.data.get('instance_classes_file', None):
-        #print('*************************************')
-        #print('Setting up ScannetPP dataset')
+        print('='*80)
+        print('【ScanNetPP 数据集参数动态调整】')
+        print('='*80)
+        
         semantic_classes = read_txt_list(cfg.data.semantic_classes_file)
         instance_classes = read_txt_list(cfg.data.instance_classes_file)
-        #print('Num semantic classes:', len(semantic_classes))
-        #print('Num instance classes:', len(instance_classes))
+        print(f'✓ 语义类别总数: {len(semantic_classes)}')
+        print(f'✓ 实例类别数: {len(instance_classes)}')
 
         # ignore_sem_classes = [i for i, c in enumerate(semantic_classes) if c not in instance_classes]
         # sem classes to ignore for instances AFTER MAPPING (not in the original labels)
         # ours: when mapping to only instance classes, dont filter out anything 
         ignore_sem_classes = []
-        # print('****** filter_out_classes:', ignore_sem_classes)
 
         # set filter_out_classes, label_offset, indoor/num_labels, general.num_targets
         # for train and val
@@ -56,17 +57,22 @@ def get_parameters(cfg: DictConfig):
         cfg.data.validation_dataset.filter_out_classes = ignore_sem_classes
         
         num_targets = len(instance_classes) + 1
-        # print('****** num_targets:', num_targets) 
         cfg.general.num_targets = num_targets
+        print(f'✓ 模型输出维度 (num_targets): {num_targets}')
 
-        # print('****** num_labels:', len(instance_classes))
-        # need to change this everywhere? no, changes automatically in the hydra cfg
+        # 动态设置 num_labels（覆盖 indoor.yaml 中的值）
+        old_num_labels = cfg.data.num_labels
         cfg.data.num_labels = len(instance_classes)
+        print(f'✓ num_labels 已更新: {old_num_labels} → {cfg.data.num_labels}')
 
-        # print('****** label_offset:', 0)
         cfg.data.train_dataset.label_offset = 0
         cfg.data.validation_dataset.label_offset = 0
-        # print('*************************************')
+        print(f'✓ label_offset: 0 (ScanNetPP 标签从 0 开始)')
+        print('='*80)
+    else:
+        # 如果没有提供标签文件，使用 indoor.yaml 的默认值
+        print(f'⚠️  未提供 semantic_classes_file/instance_classes_file')
+        print(f'   使用默认的 num_labels: {cfg.data.num_labels}')
 
     logger = logging.getLogger(__name__)
     load_dotenv(".env")

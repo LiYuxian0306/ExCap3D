@@ -1,5 +1,11 @@
 # @package data
 # 简化的scannetpp数据集配置 - 禁用或减少数据增强
+#
+# 【重要】num_labels 说明：
+# ScanNetPP 的类别数由 semantic_classes_file 和 instance_classes_file 定义
+# num_labels 会在 main_instance_segmentation.py 的 get_parameters() 中动态计算
+# 此处的值只作为后备/占位符，不会直接使用
+
 train_dataset:
   _target_: datasets.semseg.SemanticSegmentationDataset
   dataset_name: "scannetpp"
