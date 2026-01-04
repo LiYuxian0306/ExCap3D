@@ -54,8 +54,7 @@ class VoxelizeCollate:
     def __call__(self, batch):
         if ("train" in self.mode) and (self.small_crops or self.very_small_crops):
             batch = make_crops(batch)
-        if ("train" in self.mode) and self.very_small_crops:
-            batch = make_crops(batch)
+
         return voxelize(batch, self.ignore_label, self.voxel_size, self.probing, self.mode,
                         task=self.task, ignore_class_threshold=self.ignore_class_threshold,
                         filter_out_classes=self.filter_out_classes, label_offset=self.label_offset,
@@ -266,6 +265,7 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
         coords = np.floor(sample[0] / voxel_size)
         # vox coords - not yet unique
         voxelization_dict.update({"coordinates": torch.from_numpy(coords).to("cpu").contiguous(), "features": sample[1]})
+        #.contiguous():MinkowskiEngine 的底层是 C++ 写的，它强烈要求输入的 Tensor 在内存中必须是连续的
 
         # quantize the coordinates
         # maybe this change (_, _, ...) is not necessary and we can directly get out
@@ -344,6 +344,7 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
 
                 target.append({
                     'labels': label_ids,
+                    #生成segmentation训练用的二值掩码
                     'masks': list_labels[batch_id] == label_ids.unsqueeze(1)
                 })
         else:
