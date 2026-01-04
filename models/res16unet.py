@@ -8,7 +8,7 @@ from models.modules.resnet_block import BasicBlock, Bottleneck
 
 class Res16UNetBase(ResNetBase):
     BLOCK = None
-    PLANES = (32, 64, 128, 256, 256, 256, 256, 256)
+    PLANES = (32, 64, 128, 256, 256, 256, 256, 256) #每一层卷积output的特征通道数
     DILATIONS = (1, 1, 1, 1, 1, 1, 1, 1)
     LAYERS = (2, 2, 2, 2, 2, 2, 2, 2)
     INIT_DIM = 32
