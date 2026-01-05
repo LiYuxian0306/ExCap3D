@@ -17,7 +17,7 @@ from torch.cuda.amp import autocast
 class Mask3D(nn.Module):
     def __init__(
         self,
-        config,
+        backbone,
         hidden_dim,
         num_queries,
         num_heads,
@@ -72,7 +72,7 @@ class Mask3D(nn.Module):
 
         self.upconv_seg_preds = upconv_seg_preds
 
-        self.backbone = hydra.utils.instantiate(config.backbone)
+        self.backbone = backbone
         self.num_levels = len(self.hlevels)
         sizes = self.backbone.PLANES[-5:]
 
