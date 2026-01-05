@@ -18,7 +18,7 @@ def check_subdirectories(root_dir):
     """
     # 获取当前目录下的所有内容
     try:
-        items = os.listdir(root_dir/scans)
+        items = os.listdir(root_dir)
     except OSError as e:
         print(f"错误: 无法访问目录 {root_dir}. 原因: {e}")
         return
@@ -33,16 +33,17 @@ def check_subdirectories(root_dir):
     items.sort()
 
     for item in items:
-        item_path = os.path.join(root_dir, item)
+        scene_path = os.path.join(root_dir, item)
 
         # 我们只关心文件夹，忽略大文件夹下可能存在的其他散文件
-        if os.path.isdir(item_path):
+        if os.path.isdir(scene_path):
             checked_folders += 1
+            scans_path = os.path.join(scene_path,"scans")
             missing_in_this_folder = []
 
             # 检查每个必需文件是否存在
             for filename in REQUIRED_FILES:
-                file_path = os.path.join(item_path, filename)
+                file_path = os.path.join(scans_path, filename)
                 if not os.path.exists(file_path):
                     missing_in_this_folder.append(filename)
             
