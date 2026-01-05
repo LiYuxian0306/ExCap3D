@@ -1314,6 +1314,9 @@ class InstanceSegmentation(pl.LightningModule):
         # eg. 131k, 3 = original point coordinates, not normalized!
         original_coordinates = data.original_coordinates
         
+        # 初始化 assignment 为 None，避免 UnboundLocalError
+        assignment = None
+        
         # 调试信息：打印数据长度
         if batch_idx == 0:  # 只在第一个batch打印
             for bid in range(len(file_names)):
@@ -1402,7 +1405,6 @@ class InstanceSegmentation(pl.LightningModule):
 
         # compute losses and get assignments
         # need assignment for captioning!
-        assignment = None
         if self.config.data.test_mode != "test":
             if self.config.trainer.deterministic:
                 torch.use_deterministic_algorithms(False)
@@ -1943,7 +1945,7 @@ class InstanceSegmentation(pl.LightningModule):
                         torch.stack(new_preds["pred_masks"]).T,
                         len(new_preds["pred_logits"]),
                         self.model.num_classes - 1,
-                        assignment[bid]
+                        assignment=assignment[bid] if assignment is not None else None
                     )
                 # do this, get final scores, masks, classes..
                 else:
@@ -1958,7 +1960,7 @@ class InstanceSegmentation(pl.LightningModule):
                         ],
                         # actual number of classes for predictions
                         self.model.num_classes - 1,
-                        assignment=assignment[bid]
+                        assignment=assignment[bid] if assignment is not None else None
                     )
 
                 # segments to voxels, voxels to orig points
@@ -2207,7 +2209,8 @@ class InstanceSegmentation(pl.LightningModule):
                 ######### BBOX PREDS AND GT DONE ##########
 
                 ######### STORE ALL CAPTION RELATED STUFF ##########
-                self.assignment_preds[file_names[bid]] = assignment[bid]
+                if assignment is not None:
+                    self.assignment_preds[file_names[bid]] = assignment[bid]
 
                 # store gt obj ids and sem IDs
                 self.gt_obj_ids[file_names[bid]] = target_low_res[bid]['inst_ids']
