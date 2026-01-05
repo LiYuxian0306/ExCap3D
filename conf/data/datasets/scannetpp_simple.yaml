@@ -40,7 +40,7 @@ train_dataset:
   overfit: ${data.overfit}
   overfit_n_instances: ${data.overfit_n_instances}
   overfit_instance_ids: ${data.overfit_instance_ids}
-  clip_points: ${data.train_dataset.clip_points}
+  clip_points: 150000
   subset: ${data.subset}
   keep_instance_classes_file: ${data.instance_classes_file}
   # 禁用所有增强，使训练更稳定
@@ -86,7 +86,7 @@ validation_dataset:
   overfit: ${data.overfit}
   overfit_n_instances: ${data.overfit_n_instances}
   overfit_instance_ids: ${data.overfit_instance_ids}
-  clip_points: 0
+  clip_points: 150000
   subset: ${data.subset}
   keep_instance_classes_file: ${data.instance_classes_file}
   no_aug: true  # 验证集完全禁用增强
