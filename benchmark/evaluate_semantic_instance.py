@@ -292,6 +292,24 @@ def evaluate_matches(matches):
                 else:
                     ap_current = float("nan")
                 ap[di, li, oi] = ap_current
+    
+    # 调试：打印每个类别的GT和预测统计
+    print("\n" + "="*80)
+    print("PER-CLASS GT AND PREDICTION STATISTICS:")
+    print(f"{'Class':<20} {'GT Instances':>12} {'Pred Instances':>15} {'Status':>15}")
+    print("-"*80)
+    for li, label_name in enumerate(CLASS_LABELS):
+        total_gt = 0
+        total_pred = 0
+        for m in matches:
+            total_gt += len(matches[m]["gt"][label_name])
+            total_pred += len(matches[m]["pred"][label_name])
+        
+        if total_gt > 0 or total_pred > 0:
+            status = "OK" if total_gt > 0 and total_pred > 0 else ("No Pred" if total_gt > 0 else "No GT")
+            print(f"{label_name:<20} {total_gt:>12} {total_pred:>15} {status:>15}")
+    print("="*80 + "\n")
+    
     return ap
 
 
@@ -364,10 +382,29 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None, sc
         # gt not provided, load from file
         gt_ids = util_3d.load_ids(gt_file)
 
+    # 调试：检查GT数据
+    if len(gt_ids) > 0:
+        unique_ids = np.unique(gt_ids)
+        unique_sem_ids = np.unique(gt_ids // 1000)
+        logger.debug(
+            "Scene %s: GT loaded - %d points, %d unique instance IDs, semantic IDs: %s",
+            scene_name, len(gt_ids), len(unique_ids), unique_sem_ids[:20]  # 只显示前20个
+        )
+    else:
+        logger.warning("Scene %s: GT is EMPTY! len(gt_ids)=%d", scene_name, len(gt_ids))
+
     # get gt instances
     gt_instances = util_3d.get_instances(
         gt_ids, VALID_CLASS_IDS, CLASS_LABELS, ID_TO_LABEL
     )
+    
+    # 调试：检查GT实例数量
+    total_gt_instances = sum(len(gt_instances[label]) for label in gt_instances)
+    if total_gt_instances == 0:
+        logger.warning(
+            "Scene %s: No GT instances found! VALID_CLASS_IDS=%s, unique_sem_ids=%s",
+            scene_name, VALID_CLASS_IDS[:10], np.unique(gt_ids // 1000)[:10]
+        )
     # associate
     gt2pred = deepcopy(gt_instances)
     for label in gt2pred:
@@ -546,6 +583,16 @@ def evaluate(
         for i in range(len(VALID_CLASS_IDS)):
             LABEL_TO_ID[CLASS_LABELS[i]] = VALID_CLASS_IDS[i]
             ID_TO_LABEL[VALID_CLASS_IDS[i]] = CLASS_LABELS[i]
+        
+        # 调试：打印类别映射信息
+        print("\n" + "="*80)
+        print(f"EVALUATION SETUP for {dataset_name}:")
+        print(f"Total classes: {len(CLASS_LABELS)}")
+        print(f"VALID_CLASS_IDS: {VALID_CLASS_IDS[:20]}...")  # 显示前20个
+        print(f"First 10 class mappings:")
+        for i in range(min(10, len(CLASS_LABELS))):
+            print(f"  {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")
+        print("="*80 + "\n")
     
     # used only for s3dis
     if dataset_name == "s3dis":
@@ -732,6 +779,21 @@ def evaluate(
         gt2pred, pred2gt, scene_stats = assign_instances_for_scan(
             scene_preds, gt_file, gt_ids=gt_data, scene_id=scene_id, stats=scene_stats
         )
+        
+        # 调试：统计每个场景的GT和预测
+        scene_gt_count = sum(len(gt2pred[label]) for label in gt2pred)
+        scene_pred_count = sum(len(pred2gt[label]) for label in pred2gt)
+        if scene_gt_count > 0 or scene_pred_count > 0:
+            gt_by_class = {label: len(gt2pred[label]) for label in gt2pred if len(gt2pred[label]) > 0}
+            pred_by_class = {label: len(pred2gt[label]) for label in pred2gt if len(pred2gt[label]) > 0}
+            print(f"\n[Scene {sample_ndx+1}/{len(preds)}] {scene_id}:")
+            print(f"  GT instances: {scene_gt_count} across {len(gt_by_class)} classes")
+            print(f"  Pred instances: {scene_pred_count} across {len(pred_by_class)} classes")
+            if scene_gt_count > 0:
+                print(f"  GT classes: {list(gt_by_class.keys())[:5]}...")  # 显示前5个
+            if scene_pred_count > 0:
+                print(f"  Pred classes: {list(pred_by_class.keys())[:5]}...")  # 显示前5个
+        
         total_pred_instances += scene_stats["total_pred_instances"]
         skipped_instances += scene_stats["skipped_instances"]
         length_mismatches.extend(scene_stats["length_mismatches"])
