@@ -1402,6 +1402,7 @@ class InstanceSegmentation(pl.LightningModule):
 
         # compute losses and get assignments
         # need assignment for captioning!
+        assignment = None
         if self.config.data.test_mode != "test":
             if self.config.trainer.deterministic:
                 torch.use_deterministic_algorithms(False)
