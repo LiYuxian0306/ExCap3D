@@ -158,7 +158,7 @@ defaults:
   - scheduler: onecyclelr
   - trainer: trainer600
   - matcher: hungarian_matcher
-  - loss: set_criterio
+  - loss: set_criterion
   - logging: full
   - callbacks: callbacks_instance_segmentation
   - consistency: # new in our model, part-local caption consistency
