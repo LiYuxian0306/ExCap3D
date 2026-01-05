@@ -22,7 +22,6 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 echo "Running on $(hostname)"
 
 /disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python main_instance_segmentation.py \
-    +data/datasets=scannetpp_simple \
     general.save_root=/home/kylin/lyx/project_study/ExCap3D/data/excap_checkpoint \
     general.gpus=4 \
     data.train_dataset.dataset_name=scannetpp \

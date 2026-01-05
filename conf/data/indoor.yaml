@@ -46,7 +46,7 @@ test_batch_size: 1
 cache_data: false
 
 # collation 体素化
-voxel_size: 0.04
+voxel_size: 0.06
 overfit: false
 overfit_n_instances: null
 overfit_instance_ids: null
