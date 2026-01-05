@@ -18,7 +18,7 @@ def check_subdirectories(root_dir):
     """
     # 获取当前目录下的所有内容
     try:
-        items = os.listdir(root_dir)
+        items = os.listdir(root_dir/scans)
     except OSError as e:
         print(f"错误: 无法访问目录 {root_dir}. 原因: {e}")
         return
