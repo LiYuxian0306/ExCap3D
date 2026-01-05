@@ -919,6 +919,10 @@ class SemanticSegmentationDataset(Dataset):
         if extra_feats is not None:
             features = np.hstack((features, extra_feats))
 
+        # DEBUG: Check feature dimensions
+        if idx == 0:
+            print(f"[DEBUG] Mode: {self.mode} | Scene: {scene_id} | add_colors: {self.add_colors} | add_raw_coordinates: {self.add_raw_coordinates} | features.shape: {features.shape}")
+
         # scannet bug scenes?
         if self.data[idx]["raw_filepath"].split("/")[-2] in [
             "scene0636_00",
