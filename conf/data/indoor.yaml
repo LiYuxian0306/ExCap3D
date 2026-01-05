@@ -19,7 +19,7 @@ extra_feats_dir:    #额外特征的文件夹路径
 extra_feats_dim: 0  #额外特征的dimension，默认无额外特征
 ###################################
 
-in_channels: 6  # 3*(add_colors + add_raw_coordinates) + extra_feats_dim，当前启用颜色+坐标，法向量关闭
+in_channels: 3  # 3*(add_colors + add_raw_coordinates) + extra_feats_dim，当前启用颜色+坐标，法向量关闭
 # num_labels: 语义类别数量
 #   - ScanNet (scannet.yaml): 20类
 #   - ScanNet200 (scannet200.yaml): 200类
