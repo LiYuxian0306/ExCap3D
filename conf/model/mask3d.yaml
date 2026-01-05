@@ -40,7 +40,7 @@ config:
   backbone:
     _target_: models.Res16UNet34C
     config:
-      dialations: [ 1, 1, 1, 1 ]
+      dilations: [ 1, 1, 1, 1 ]
       conv1_kernel_size: 5
       bn_momentum: 0.02
     # depends on normals, color, raw_coordinates

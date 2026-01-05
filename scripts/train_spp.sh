@@ -23,11 +23,11 @@ echo "Running on $(hostname)"
 
 /disk1/work/kylin/anaconda3/envs/excap3d_env/bin/python main_instance_segmentation.py \
     general.save_root=/home/kylin/lyx/project_study/ExCap3D/data/excap_checkpoint \
-    general.gpus=4 \
+    general.gpus=1 \
     data.train_dataset.dataset_name=scannetpp \
     data.validation_dataset.dataset_name=scannetpp \
-    data.train_dataset.clip_points=600000 \
-    data.validation_dataset.clip_points=0 \
+    data.train_dataset.clip_points=150000 \
+    data.validation_dataset.clip_points=150000 \
     data.ignore_label=-100 \
     general.segment_strategy="majority_instance"  \
     data.data_dir=/home/kylin/lyx/project_study/ExCap3D/data/processed/ \
