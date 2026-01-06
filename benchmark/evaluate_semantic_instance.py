@@ -651,7 +651,8 @@ def evaluate(
             print(f"  ...")
             print(f"  Last 10:")
             for i in range(max(0, len(CLASS_LABELS)-10), len(CLASS_LABELS)):
-                print(f"    {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")        print("\n" + "="*80)
+                print(f"    {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")
+        print("\n" + "="*80)
         print(f"EVALUATION SETUP for {dataset_name}:")
         print(f"Total classes: {len(CLASS_LABELS)}")
         print(f"VALID_CLASS_IDS: {VALID_CLASS_IDS[:20]}...")  # 显示前20个
