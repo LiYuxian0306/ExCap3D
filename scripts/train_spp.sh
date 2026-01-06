@@ -15,7 +15,7 @@
 eval "$(conda shell.bash hook)"
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
-export CUDA_VISIBLE_DEVICES=1,2
+export CUDA_VISIBLE_DEVICES=0,1
 
 
 # print node name using hostname
@@ -36,9 +36,9 @@ echo "Running on $(hostname)"
     data.semantic_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt \
     data.instance_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt \
     caption_model.class_weights_file=null \
-    data.batch_size=3 \
+    data.batch_size=6 \
     general.max_batch_size=1200000 \
     'general.wandb_group="train instance segmentation"' \
-    'general.notes="train with 4 GPUs - optimized memory"' \
+    'general.notes="train with 2 GPUs - optimized memory"' \
     
 
