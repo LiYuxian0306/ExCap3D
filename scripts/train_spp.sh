@@ -15,7 +15,7 @@
 eval "$(conda shell.bash hook)"
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
-export CUDA_VISIBLE_DEVICES=1,2,3
+export CUDA_VISIBLE_DEVICES=1,2
 
 
 # print node name using hostname
@@ -26,8 +26,8 @@ echo "Running on $(hostname)"
     general.gpus=3 \
     data.train_dataset.dataset_name=scannetpp \
     data.validation_dataset.dataset_name=scannetpp \
-    data.train_dataset.clip_points=250000 \
-    data.validation_dataset.clip_points=250000 \
+    data.train_dataset.clip_points=200000 \
+    data.validation_dataset.clip_points=200000 \
     data.ignore_label=-100 \
     general.segment_strategy="majority_instance"  \
     data.data_dir=/home/kylin/lyx/project_study/ExCap3D/data/processed/ \
@@ -36,7 +36,7 @@ echo "Running on $(hostname)"
     data.semantic_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt \
     data.instance_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt \
     caption_model.class_weights_file=null \
-    data.batch_size=2 \
+    data.batch_size=3 \
     general.max_batch_size=1200000 \
     'general.wandb_group="train instance segmentation"' \
     'general.notes="train with 4 GPUs - optimized memory"' \
