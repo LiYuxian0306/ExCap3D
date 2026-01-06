@@ -386,12 +386,40 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None, sc
     if len(gt_ids) > 0:
         unique_ids = np.unique(gt_ids)
         unique_sem_ids = np.unique(gt_ids // 1000)
-        logger.debug(
-            "Scene %s: GT loaded - %d points, %d unique instance IDs, semantic IDs: %s",
-            scene_name, len(gt_ids), len(unique_ids), unique_sem_ids[:20]  # 只显示前20个
-        )
+        
+        # 详细打印GT的semantic ID和对应的类别名
+        print(f"\n{'='*80}")
+        print(f"[GT ANALYSIS] Scene: {scene_name}")
+        print(f"{'='*80}")
+        print(f"Total points: {len(gt_ids)}")
+        print(f"Unique instance IDs (sem*1000+inst): {len(unique_ids)}")
+        print(f"  Example instance IDs: {sorted(unique_ids)[:10]}")
+        print(f"\nUnique semantic IDs: {unique_sem_ids}")
+        print(f"\nDetailed semantic ID mapping:")
+        print(f"{'Sem ID':<10} {'Class Name':<25} {'In Valid?':<12} {'Instance Count':<15}")
+        print("-"*80)
+        
+        for sem_id in sorted(unique_sem_ids):
+            # 计算该语义类别有多少个实例
+            instances_of_this_class = [uid for uid in unique_ids if uid // 1000 == sem_id]
+            instance_count = len(instances_of_this_class)
+            
+            if sem_id in ID_TO_LABEL:
+                class_name = ID_TO_LABEL[sem_id]
+                in_valid = "✓ YES" if sem_id in VALID_CLASS_IDS else "✗ NO"
+                print(f"{sem_id:<10} {class_name:<25} {in_valid:<12} {instance_count:<15}")
+            else:
+                print(f"{sem_id:<10} {'❌ NOT IN MAPPING':<25} {'✗ NO':<12} {instance_count:<15}")
+        
+        # 检查是否有常见类别（用于判断数据是否缺失）
+        common_classes = {3: 'table', 4: 'door', 9: 'chair', 19: 'window', 6: 'cabinet'}
+        print(f"\n[SANITY CHECK] Common objects presence:")
+        for sem_id, class_name in common_classes.items():
+            is_present = "✓ PRESENT" if sem_id in unique_sem_ids else "✗ MISSING"
+            print(f"  {class_name:<15} (ID:{sem_id:2d}): {is_present}")
+        print(f"{'='*80}\n")
     else:
-        logger.warning("Scene %s: GT is EMPTY! len(gt_ids)=%d", scene_name, len(gt_ids))
+        print(f"\n❌ WARNING: Scene {scene_name} - GT is EMPTY! len(gt_ids)={len(gt_ids)}\n")
 
     # get gt instances
     gt_instances = util_3d.get_instances(
@@ -414,6 +442,29 @@ def assign_instances_for_scan(pred: dict, gt_file: str = None, gt_ids = None, sc
     num_pred_instances = 0
     # mask of void labels in the groundtruth
     bool_void = np.logical_not(np.in1d(gt_ids // 1000, VALID_CLASS_IDS))
+    # 调试：统计预测的类别分布
+    pred_label_counts = {}
+    for uuid in pred_info:
+        label_id = int(pred_info[uuid]["label_id"])
+        pred_label_counts[label_id] = pred_label_counts.get(label_id, 0) + 1
+    
+    if len(pred_label_counts) > 0:
+        print(f"\n{'='*80}")
+        print(f"[PREDICTION ANALYSIS] Scene: {scene_name}")
+        print(f"{'='*80}")
+        print(f"Total predictions: {len(pred_info)}")
+        print(f"\nPredicted semantic IDs distribution:")
+        print(f"{'Sem ID':<10} {'Class Name':<25} {'Count':<10} {'In Valid?':<12}")
+        print("-"*80)
+        for label_id, count in sorted(pred_label_counts.items(), key=lambda x: -x[1]):
+            if label_id in ID_TO_LABEL:
+                class_name = ID_TO_LABEL[label_id]
+                in_valid = "✓ YES" if label_id in VALID_CLASS_IDS else "✗ NO"
+                print(f"{label_id:<10} {class_name:<25} {count:<10} {in_valid:<12}")
+            else:
+                print(f"{label_id:<10} {'❌ UNKNOWN':<25} {count:<10} {'✗ NO':<12}")
+        print(f"{'='*80}\n")
+    
     # go thru all prediction masks
     for uuid in pred_info:
         label_id = int(pred_info[uuid]["label_id"])
@@ -584,8 +635,23 @@ def evaluate(
             LABEL_TO_ID[CLASS_LABELS[i]] = VALID_CLASS_IDS[i]
             ID_TO_LABEL[VALID_CLASS_IDS[i]] = CLASS_LABELS[i]
         
-        # 调试：打印类别映射信息
-        print("\n" + "="*80)
+        # 调试：打印类别映射信息        
+        # 显示完整的类别列表用于参考
+        print(f"\n[INFO] Complete ID to Label mapping ({len(VALID_CLASS_IDS)} classes):")
+        print(f"  Range: {VALID_CLASS_IDS.min()} to {VALID_CLASS_IDS.max()}")
+        if len(VALID_CLASS_IDS) <= 30:
+            # 如果类别不多，显示全部
+            for i in range(len(CLASS_LABELS)):
+                print(f"  {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")
+        else:
+            # 否则只显示头尾
+            print(f"  First 20:")
+            for i in range(min(20, len(CLASS_LABELS))):
+                print(f"    {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")
+            print(f"  ...")
+            print(f"  Last 10:")
+            for i in range(max(0, len(CLASS_LABELS)-10), len(CLASS_LABELS)):
+                print(f"    {VALID_CLASS_IDS[i]:3d} -> {CLASS_LABELS[i]}")        print("\n" + "="*80)
         print(f"EVALUATION SETUP for {dataset_name}:")
         print(f"Total classes: {len(CLASS_LABELS)}")
         print(f"VALID_CLASS_IDS: {VALID_CLASS_IDS[:20]}...")  # 显示前20个
