@@ -36,7 +36,7 @@ echo "Running on $(hostname)"
     data.semantic_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100.txt \
     data.instance_classes_file=/home/kylin/datasets/scannetpp_v2/scannetpp/metadata/semantic_benchmark/top100_instance.txt \
     caption_model.class_weights_file=null \
-    data.batch_size=1 \
+    data.batch_size=2 \
     general.max_batch_size=1200000 \
     'general.wandb_group="train instance segmentation"' \
     'general.notes="train with 4 GPUs - optimized memory"' \
