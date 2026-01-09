@@ -15,7 +15,7 @@
 eval "$(conda shell.bash hook)"
 
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
-export CUDA_VISIBLE_DEVICES=2,3,4
+export CUDA_VISIBLE_DEVICES=5,6,7
 
 
 # print node name using hostname
