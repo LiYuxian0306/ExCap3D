@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../excap3d_summary"
+		},
+		{
+			"path": "../../scannetpp"
+		}
+	],
+	"settings": {}
+}
